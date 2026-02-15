@@ -15,7 +15,7 @@ const referrals = [
 
 const Referrals = () => {
   const { toast } = useToast();
-  const link = "https://workflow.ru/ref/alexey123";
+  const link = "https://atlantic.ru/ref/alexey123";
 
   return (
     <DashboardLayout>
