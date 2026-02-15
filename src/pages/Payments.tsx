@@ -94,19 +94,60 @@ const Payments = () => {
     } finally { setRequesting(false); }
   };
 
+  const validateRequisite = (method: string, value: string): string | null => {
+    const v = value.trim();
+    if (!v) return null;
+    switch (method) {
+      case "card": {
+        const digits = v.replace(/[\s\-]/g, "");
+        if (!/^\d{13,19}$/.test(digits)) return "Номер карты должен содержать 13–19 цифр";
+        return null;
+      }
+      case "sbp": {
+        const phone = v.replace(/[\s\-\(\)]/g, "");
+        if (!/^\+?[0-9]{10,15}$/.test(phone)) return "Введите корректный номер телефона";
+        return null;
+      }
+      case "crypto": {
+        if (v.length < 20 || v.length > 128) return "Адрес кошелька должен быть от 20 до 128 символов";
+        if (!/^[a-zA-Z0-9\-_:\.]+$/.test(v)) return "Адрес содержит недопустимые символы";
+        return null;
+      }
+      case "lolzteam": {
+        if (v.length < 2 || v.length > 50) return "Ник должен быть от 2 до 50 символов";
+        return null;
+      }
+      default: return null;
+    }
+  };
+
+  const [reqErrors, setReqErrors] = useState<Record<string, string | null>>({});
+
   const saveRequisites = async () => {
     if (!user) return;
+    const errors: Record<string, string | null> = {};
+    let hasError = false;
+    for (const method of Object.keys(reqValues)) {
+      if (reqValues[method]) {
+        const err = validateRequisite(method, reqValues[method]);
+        errors[method] = err;
+        if (err) hasError = true;
+      }
+    }
+    setReqErrors(errors);
+    if (hasError) { toast({ title: "Проверьте правильность данных", variant: "destructive" }); return; }
     try {
       for (const method of Object.keys(reqValues)) {
         if (reqValues[method]) {
           await supabase.from("user_requisites").upsert({
-            user_id: user.id, method, details: reqValues[method],
+            user_id: user.id, method, details: reqValues[method].trim(),
           }, { onConflict: "user_id,method" });
         }
       }
       const { data } = await supabase.from("user_requisites").select("*").eq("user_id", user.id);
       setRequisites(data || []);
       setEditingRequisites(false);
+      setReqErrors({});
       toast({ title: "Реквизиты сохранены" });
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
@@ -156,9 +197,10 @@ const Payments = () => {
             {Object.entries(methodLabels).map(([key, label]) => (
               <div key={key}>
                 <Label className="text-xs mb-1 block text-muted-foreground">{label}</Label>
-                <Input value={reqValues[key] || ""} onChange={e => setReqValues(prev => ({ ...prev, [key]: e.target.value }))}
-                  placeholder={key === "card" ? "Номер карты" : key === "sbp" ? "Номер телефона" : key === "crypto" ? "Адрес кошелька" : "Ник LOLZTEAM"}
-                  className="rounded-xl" />
+                <Input value={reqValues[key] || ""} onChange={e => { setReqValues(prev => ({ ...prev, [key]: e.target.value })); setReqErrors(prev => ({ ...prev, [key]: null })); }}
+                  placeholder={key === "card" ? "0000 0000 0000 0000" : key === "sbp" ? "+7 900 000 00 00" : key === "crypto" ? "Адрес кошелька (TRC20, ERC20...)" : "Ник LOLZTEAM"}
+                  className={`rounded-xl ${reqErrors[key] ? "border-destructive" : ""}`} />
+                {reqErrors[key] && <p className="text-xs text-destructive mt-1">{reqErrors[key]}</p>}
               </div>
             ))}
             <Button className="gradient-primary text-primary-foreground border-0 rounded-xl" onClick={saveRequisites}>Сохранить</Button>
