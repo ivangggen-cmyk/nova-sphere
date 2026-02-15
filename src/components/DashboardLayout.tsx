@@ -67,7 +67,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <header className="hidden md:block fixed top-0 left-0 right-0 z-50 glass-strong border-b border-border">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
+          <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
             <AtlanticLogo size="sm" />
           </Link>
 
@@ -183,7 +183,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
       {/* ===== MOBILE TOP BAR ===== */}
       <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border flex items-center justify-between px-4">
-        <Link to="/">
+        <Link to="/dashboard">
           <AtlanticLogo size="sm" />
         </Link>
         <div className="flex items-center gap-2">

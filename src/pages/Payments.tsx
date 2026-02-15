@@ -26,6 +26,12 @@ const Payments = () => {
   const [requisites, setRequisites] = useState<any[]>([]);
   const [editingRequisites, setEditingRequisites] = useState(false);
   const [reqValues, setReqValues] = useState<Record<string, string>>({ card: "", sbp: "", crypto: "", lolzteam: "" });
+  const [forceUpdate, setForceUpdate] = useState(0);
+  const [currentBalance, setCurrentBalance] = useState<number>(0);
+
+  useEffect(() => {
+    setCurrentBalance(Number(profile?.balance || 0));
+  }, [profile?.balance, forceUpdate]);
 
   useEffect(() => {
     if (!user) return;
@@ -49,7 +55,7 @@ const Payments = () => {
     }
     const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount <= 0) { toast({ title: "Некорректная сумма", variant: "destructive" }); return; }
-    if (amount > (profile?.balance || 0)) { toast({ title: "Недостаточно средств", variant: "destructive" }); return; }
+    if (amount > currentBalance) { toast({ title: "Недостаточно средств", variant: "destructive" }); return; }
 
     const methodReq = requisites.find((r: any) => r.method === withdrawMethod);
     if (!methodReq || !methodReq.details) {
@@ -58,7 +64,7 @@ const Payments = () => {
 
     setRequesting(true);
     try {
-      const newBalance = Number(profile?.balance || 0) - amount;
+      const newBalance = currentBalance - amount;
       const { error: balError } = await supabase.from("profiles").update({ balance: newBalance }).eq("user_id", user.id);
       if (balError) throw balError;
 
@@ -74,10 +80,15 @@ const Payments = () => {
         details: `Сумма: ${amount} ₽, Метод: ${methodLabels[withdrawMethod]}`,
       });
 
+      // Force refresh profile balance in auth context
+      profile.balance = newBalance;
+
       toast({ title: "Запрос отправлен", description: "Средства заморожены до решения администратора" });
       setWithdrawAmount(""); setWithdrawMethod("");
       const { data } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
       setTransactions(data || []);
+      // Force re-render by updating a local state trigger
+      setForceUpdate(prev => prev + 1);
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     } finally { setRequesting(false); }
@@ -116,7 +127,7 @@ const Payments = () => {
         {[
           { label: "Общий доход", value: `${totalIn.toLocaleString("ru-RU")} ₽`, icon: CreditCard, color: "text-primary" },
           { label: "Выведено", value: `${totalOut.toLocaleString("ru-RU")} ₽`, icon: ArrowUpRight, color: "text-accent" },
-          { label: "На балансе", value: `${Number(profile?.balance || 0).toLocaleString("ru-RU")} ₽`, icon: ArrowDownRight, color: "text-success" },
+          { label: "На балансе", value: `${currentBalance.toLocaleString("ru-RU")} ₽`, icon: ArrowDownRight, color: "text-success" },
         ].map((s) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             className="bg-card border border-border rounded-2xl p-5">
