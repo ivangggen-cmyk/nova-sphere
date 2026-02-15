@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Wallet, ClipboardCheck, TrendingUp, Star, ArrowRight, Clock, Sparkles, Zap, Bell, ChevronRight } from "lucide-react";
+import { Wallet, ClipboardCheck, TrendingUp, Star, ArrowRight, Clock, Sparkles, Zap, Bell, ChevronRight, Newspaper } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
@@ -24,16 +24,19 @@ const Dashboard = () => {
   const { user, profile } = useAuth();
   const [recentTasks, setRecentTasks] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [newsItems, setNewsItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [tasksRes, notifsRes] = await Promise.all([
+      const [tasksRes, notifsRes, newsRes] = await Promise.all([
         supabase.from("user_tasks").select("*, tasks(title, reward)").eq("user_id", user.id).order("assigned_at", { ascending: false }).limit(4),
         supabase.from("notifications").select("*").eq("user_id", user.id).eq("is_read", false).order("created_at", { ascending: false }).limit(5),
+        supabase.from("news").select("*").eq("is_published", true).order("created_at", { ascending: false }).limit(5),
       ]);
       setRecentTasks(tasksRes.data || []);
       setNotifications(notifsRes.data || []);
+      setNewsItems(newsRes.data || []);
     };
     fetchData();
   }, [user]);
@@ -210,6 +213,55 @@ const Dashboard = () => {
           )}
         </motion.div>
       </div>
+
+      {/* News Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mt-6 bg-card border border-border rounded-2xl p-5"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Newspaper className="h-4 w-4 text-primary" />
+          <h3 className="font-display font-semibold text-sm">Новости</h3>
+        </div>
+        {newsItems.length === 0 ? (
+          <div className="text-center py-10">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-muted flex items-center justify-center mb-3">
+              <Newspaper className="h-5 w-5 text-muted-foreground/40" />
+            </div>
+            <p className="text-muted-foreground text-sm">Нет новостей</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {newsItems.map((item, i) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * i }}
+                className="rounded-xl border border-border overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {item.image_url && (
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="w-full h-36 object-cover"
+                  />
+                )}
+                <div className="p-4">
+                  <h4 className="font-semibold text-sm mb-1 line-clamp-2">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground line-clamp-3 mb-2">{item.content}</p>
+                  <div className="text-[11px] text-muted-foreground/60 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(item.created_at).toLocaleDateString("ru-RU")}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
     </DashboardLayout>
   );
 };

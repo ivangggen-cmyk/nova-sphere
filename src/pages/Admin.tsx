@@ -130,6 +130,7 @@ const Admin = () => {
   
   const [newNewsTitle, setNewNewsTitle] = useState("");
   const [newNewsContent, setNewNewsContent] = useState("");
+  const [newNewsImageFile, setNewNewsImageFile] = useState<File | null>(null);
   
   const [notifUserId, setNotifUserId] = useState("");
   const [notifTitle, setNotifTitle] = useState("");
@@ -590,10 +591,19 @@ const Admin = () => {
   // ====== NEWS ACTIONS ======
   const createNews = async () => {
     if (!newNewsTitle) return;
-    const { data, error } = await supabase.from("news").insert({ title: newNewsTitle, content: newNewsContent }).select();
+    let imageUrl = "";
+    if (newNewsImageFile) {
+      const ext = newNewsImageFile.name.split(".").pop();
+      const path = `news/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("task-images").upload(path, newNewsImageFile);
+      if (upErr) { toast({ title: "Ошибка загрузки изображения", variant: "destructive" }); return; }
+      const { data: urlData } = supabase.storage.from("task-images").getPublicUrl(path);
+      imageUrl = urlData.publicUrl;
+    }
+    const { data, error } = await supabase.from("news").insert({ title: newNewsTitle, content: newNewsContent, image_url: imageUrl } as any).select();
     if (error) { toast({ title: "Ошибка", variant: "destructive" }); return; }
     setNews(prev => [data![0], ...prev]);
-    setNewNewsTitle(""); setNewNewsContent("");
+    setNewNewsTitle(""); setNewNewsContent(""); setNewNewsImageFile(null);
     toast({ title: "Новость создана" });
   };
 
@@ -1835,12 +1845,19 @@ const Admin = () => {
                 <div className="space-y-4 mb-4">
                   <Input value={newNewsTitle} onChange={e => setNewNewsTitle(e.target.value)} placeholder="Заголовок" />
                   <Textarea value={newNewsContent} onChange={e => setNewNewsContent(e.target.value)} placeholder="Содержание" rows={4} />
+                  <div>
+                    <Label className="text-sm mb-1 block">Изображение (необязательно)</Label>
+                    <Input type="file" accept="image/*" onChange={e => setNewNewsImageFile(e.target.files?.[0] || null)} />
+                  </div>
                 </div>
                 <Button className="gradient-accent text-accent-foreground border-0" onClick={createNews}><Plus className="h-4 w-4 mr-2" /> Добавить</Button>
               </div>
               <div className="space-y-3">
                 {news.map(n => (
                   <div key={n.id} className="glass rounded-xl p-4">
+                    {(n as any).image_url && (
+                      <img src={(n as any).image_url} alt={n.title} className="w-full h-40 object-cover rounded-lg mb-3" />
+                    )}
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-medium">{n.title}</div>
                       <div className="flex items-center gap-3">
