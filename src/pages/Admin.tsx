@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -7,7 +7,8 @@ import {
   Edit, Trash2, CheckCircle2, XCircle, Clock, DollarSign, TrendingUp,
   Globe, Lock, Megaphone, RefreshCw,
   Activity, Award, Send, ShieldCheck, Tag, Layers, ChevronDown, Menu, X,
-  ArrowUpRight, ArrowDownRight, Image, UserCheck, UsersRound, Eye
+  ArrowUpRight, ArrowDownRight, Image, UserCheck, UsersRound, Eye,
+  Copy, Download, PieChart, UserX, Filter, Zap, Calendar, Hash, Percent, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import AtlanticLogo from "@/components/AtlanticLogo";
 
 const adminNav = [
   { label: "Обзор", icon: LayoutDashboard, tab: "overview" },
+  { label: "Статистика", icon: PieChart, tab: "statistics" },
   { label: "Пользователи", icon: Users, tab: "users" },
   { label: "Задания", icon: ClipboardList, tab: "tasks" },
   { label: "Категории", icon: Tag, tab: "categories" },
@@ -92,8 +94,18 @@ const Admin = () => {
   const [news, setNews] = useState<any[]>([]);
   const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [allRequisites, setAllRequisites] = useState<any[]>([]);
+  const [userTasks, setUserTasks] = useState<any[]>([]);
   const [searchUsers, setSearchUsers] = useState("");
   const [searchTasks, setSearchTasks] = useState("");
+  
+  // Manual payment form
+  const [manualPayUserId, setManualPayUserId] = useState("");
+  const [manualPayAmount, setManualPayAmount] = useState("");
+  const [manualPayDesc, setManualPayDesc] = useState("");
+  const [manualPayType, setManualPayType] = useState("reward");
+  
+  // Bulk notification by level
+  const [bulkNotifLevel, setBulkNotifLevel] = useState("all");
   
   // Form states
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -160,7 +172,7 @@ const Admin = () => {
   const [stats, setStats] = useState({ users: 0, activeTasks: 0, totalPaid: 0, pendingReports: 0 });
 
   const fetchAll = useCallback(async () => {
-    const [usersR, tasksR, catsR, txR, reportsR, refsR, settingsR, logsR, bannersR, newsR, notifsR, reqsR, verifR, teamR] = await Promise.all([
+    const [usersR, tasksR, catsR, txR, reportsR, refsR, settingsR, logsR, bannersR, newsR, notifsR, reqsR, verifR, teamR, userTasksR] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*, task_categories(name)").order("created_at", { ascending: false }),
       supabase.from("task_categories").select("*").order("name"),
@@ -175,6 +187,7 @@ const Admin = () => {
       supabase.from("user_requisites").select("*").order("created_at", { ascending: false }),
       supabase.from("verification_requests" as any).select("*").order("created_at", { ascending: false }),
       supabase.from("team_members" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("user_tasks").select("*, tasks(title, reward)").order("assigned_at", { ascending: false }),
     ]);
 
     const profilesData = usersR.data || [];
@@ -210,6 +223,9 @@ const Admin = () => {
     const teamEnriched = (teamR.data || []).map((t: any) => ({ ...t, profiles: profileMap.get(t.user_id) || null }));
     setTeamMembers(teamEnriched);
     
+    // User tasks
+    setUserTasks(userTasksR.data || []);
+    
     const totalPaid = (txR.data || []).filter((t: any) => t.status === "completed" || t.status === "approved").reduce((s: number, t: any) => s + Number(t.amount), 0);
     const pendingReports = (reportsR.data || []).filter((r: any) => r.status === "pending").length;
     const activeTasks = (tasksR.data || []).filter((t: any) => t.status === "active").length;
@@ -218,6 +234,74 @@ const Admin = () => {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // ====== COMPUTED STATISTICS ======
+  const computedStats = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const newUsersToday = users.filter(u => new Date(u.created_at) >= today).length;
+    const newUsersWeek = users.filter(u => new Date(u.created_at) >= weekAgo).length;
+    const newUsersMonth = users.filter(u => new Date(u.created_at) >= monthAgo).length;
+    const verifiedUsers = users.filter(u => u.is_verified).length;
+    const blockedUsers = users.filter(u => u.is_blocked).length;
+    const activeUsers = users.filter(u => !u.is_blocked).length;
+
+    const totalBalance = users.reduce((s, u) => s + Number(u.balance), 0);
+    const totalEarned = users.reduce((s, u) => s + Number(u.total_earned), 0);
+    const totalWithdrawn = users.reduce((s, u) => s + Number(u.total_withdrawn), 0);
+    const avgBalance = users.length ? totalBalance / users.length : 0;
+
+    const totalTasksCompleted = users.reduce((s, u) => s + (u.tasks_completed || 0), 0);
+    const avgRating = users.length ? users.reduce((s, u) => s + Number(u.rating), 0) / users.length : 0;
+    const avgTasksPerUser = users.length ? totalTasksCompleted / users.length : 0;
+
+    const activeTasks = tasks.filter(t => t.status === "active").length;
+    const pausedTasks = tasks.filter(t => t.status === "paused").length;
+    const completedTasks = tasks.filter(t => t.status === "completed").length;
+    const avgReward = tasks.length ? tasks.reduce((s, t) => s + Number(t.reward), 0) / tasks.length : 0;
+    const totalSpots = tasks.reduce((s, t) => s + (t.total_spots || 0), 0);
+    const takenSpots = tasks.reduce((s, t) => s + (t.taken_spots || 0), 0);
+
+    const approvedReports = reports.filter(r => r.status === "approved").length;
+    const rejectedReports = reports.filter(r => r.status === "rejected").length;
+    const pendingReportsCount = reports.filter(r => r.status === "pending").length;
+    const approvalRate = reports.length ? (approvedReports / reports.length * 100) : 0;
+
+    const completedPayments = transactions.filter(t => t.status === "completed" || t.status === "approved");
+    const pendingPaymentsAmount = transactions.filter(t => t.status === "pending").reduce((s, t) => s + Number(t.amount), 0);
+    const totalPaidOut = completedPayments.reduce((s, t) => s + Number(t.amount), 0);
+    const withdrawals = transactions.filter(t => t.type === "withdrawal");
+    const rewards = transactions.filter(t => t.type === "reward");
+    const refBonuses = transactions.filter(t => t.type === "referral_bonus");
+
+    const levelDistribution = {
+      novice: users.filter(u => u.level === "Новичок").length,
+      advanced: users.filter(u => u.level === "Продвинутый").length,
+      expert: users.filter(u => u.level === "Эксперт").length,
+    };
+
+    const categoryStats = categories.map(c => ({
+      ...c,
+      taskCount: tasks.filter(t => t.category_id === c.id).length,
+      activeCount: tasks.filter(t => t.category_id === c.id && t.status === "active").length,
+    }));
+
+    const topEarners = [...users].sort((a, b) => Number(b.total_earned) - Number(a.total_earned)).slice(0, 5);
+    const topCompletions = [...users].sort((a, b) => (b.tasks_completed || 0) - (a.tasks_completed || 0)).slice(0, 5);
+
+    return {
+      newUsersToday, newUsersWeek, newUsersMonth, verifiedUsers, blockedUsers, activeUsers,
+      totalBalance, totalEarned, totalWithdrawn, avgBalance,
+      totalTasksCompleted, avgRating, avgTasksPerUser,
+      activeTasks, pausedTasks, completedTasks, avgReward, totalSpots, takenSpots,
+      approvedReports, rejectedReports, pendingReportsCount, approvalRate,
+      pendingPaymentsAmount, totalPaidOut, withdrawals: withdrawals.length, rewards: rewards.length, refBonuses: refBonuses.length,
+      levelDistribution, categoryStats, topEarners, topCompletions,
+    };
+  }, [users, tasks, transactions, reports, referrals, categories]);
 
   // ====== USER ACTIONS ======
   const blockUser = async (userId: string, block: boolean) => {
@@ -556,6 +640,114 @@ const Admin = () => {
     await supabase.from("security_logs").insert({ user_id: user?.id, event, details });
   };
 
+  // ====== NEW FEATURES ======
+  
+  // 1. Duplicate task
+  const duplicateTask = async (task: any) => {
+    const { id, created_at, updated_at, taken_spots, task_categories, ...rest } = task;
+    const { data, error } = await supabase.from("tasks").insert({
+      ...rest, title: `${rest.title} (копия)`, taken_spots: 0, created_by: user?.id,
+    } as any).select("*, task_categories(name)");
+    if (error) { toast({ title: "Ошибка", description: error.message, variant: "destructive" }); return; }
+    setTasks(prev => [data![0], ...prev]);
+    toast({ title: "Задание дублировано" });
+  };
+
+  // 2. Export users to CSV
+  const exportUsersCSV = () => {
+    const headers = ["Имя", "Email", "Телефон", "Уровень", "Баланс", "Заработано", "Выведено", "Заданий", "Рейтинг", "Верифицирован", "Заблокирован", "Дата регистрации"];
+    const rows = users.map(u => [
+      u.full_name, u.email, u.phone || "", u.level, u.balance, u.total_earned, u.total_withdrawn,
+      u.tasks_completed, u.rating, u.is_verified ? "Да" : "Нет", u.is_blocked ? "Да" : "Нет",
+      new Date(u.created_at).toLocaleDateString("ru-RU"),
+    ]);
+    const csv = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast({ title: `Экспортировано ${users.length} пользователей` });
+  };
+
+  // 3. Export transactions to CSV
+  const exportTransactionsCSV = () => {
+    const headers = ["Пользователь", "Тип", "Сумма", "Метод", "Статус", "Дата"];
+    const rows = transactions.map(t => [
+      t.profiles?.full_name || t.profiles?.email || "—", 
+      t.type === "withdrawal" ? "Вывод" : t.type === "reward" ? "Награда" : "Реф. бонус",
+      t.amount, t.payment_method || "—",
+      t.status === "approved" || t.status === "completed" ? "Подтверждено" : t.status === "pending" ? "Ожидает" : "Отклонено",
+      new Date(t.created_at).toLocaleDateString("ru-RU"),
+    ]);
+    const csv = [headers.join(";"), ...rows.map(r => r.join(";"))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `transactions_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast({ title: `Экспортировано ${transactions.length} транзакций` });
+  };
+
+  // 4. Manual payment creation
+  const createManualPayment = async () => {
+    if (!manualPayUserId || !manualPayAmount) { toast({ title: "Заполните пользователя и сумму", variant: "destructive" }); return; }
+    await createPayment(manualPayUserId, parseFloat(manualPayAmount), manualPayType, manualPayDesc || "Ручное начисление");
+    setManualPayAmount(""); setManualPayDesc("");
+    toast({ title: "Платёж создан" });
+  };
+
+  // 5. Bulk block/unblock
+  const bulkBlockUsers = async (blocked: boolean) => {
+    const targetUsers = filteredUsers.filter(u => u.is_blocked !== blocked);
+    if (targetUsers.length === 0) { toast({ title: "Нет пользователей для действия" }); return; }
+    for (const u of targetUsers) {
+      await supabase.from("profiles").update({ is_blocked: blocked }).eq("user_id", u.user_id);
+    }
+    setUsers(prev => prev.map(u => targetUsers.some(tu => tu.user_id === u.user_id) ? { ...u, is_blocked: blocked } : u));
+    toast({ title: `${blocked ? "Заблокировано" : "Разблокировано"}: ${targetUsers.length} пользователей` });
+  };
+
+  // 6. Bulk send notification by level
+  const sendBulkByLevel = async () => {
+    if (!notifTitle) { toast({ title: "Введите заголовок", variant: "destructive" }); return; }
+    const targetUsers = bulkNotifLevel === "all" ? users : users.filter(u => u.level === bulkNotifLevel);
+    const inserts = targetUsers.map(u => ({
+      user_id: u.user_id, title: notifTitle, message: notifMessage, type: notifType as any
+    }));
+    if (inserts.length === 0) { toast({ title: "Нет пользователей с этим уровнем" }); return; }
+    await supabase.from("notifications").insert(inserts);
+    toast({ title: `Отправлено ${inserts.length} пользователям уровня "${bulkNotifLevel === "all" ? "Все" : bulkNotifLevel}"` });
+  };
+
+  // 7. Delete payment
+  const deletePayment = async (id: string) => {
+    await supabase.from("payments").delete().eq("id", id);
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    toast({ title: "Платёж удалён" });
+  };
+
+  // 8. Clear notifications for user
+  const clearUserNotifications = async (userId: string) => {
+    await supabase.from("notifications").delete().eq("user_id", userId);
+    setAllNotifications(prev => prev.filter(n => n.user_id !== userId));
+    toast({ title: "Уведомления пользователя очищены" });
+  };
+
+  // 9. Reset user stats
+  const resetUserStats = async (userId: string) => {
+    await supabase.from("profiles").update({ balance: 0, total_earned: 0, total_withdrawn: 0, tasks_completed: 0, rating: 0 }).eq("user_id", userId);
+    setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, balance: 0, total_earned: 0, total_withdrawn: 0, tasks_completed: 0, rating: 0 } : u));
+    toast({ title: "Статистика пользователя сброшена" });
+  };
+
+  // 10. Update task spots
+  const updateTaskSpots = async (taskId: string, totalSpots: number) => {
+    await supabase.from("tasks").update({ total_spots: totalSpots }).eq("id", taskId);
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, total_spots: totalSpots } : t));
+    toast({ title: `Количество мест обновлено: ${totalSpots}` });
+  };
+
   const filteredUsers = users.filter(u =>
     u.full_name?.toLowerCase().includes(searchUsers.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchUsers.toLowerCase())
@@ -797,13 +989,192 @@ const Admin = () => {
             </motion.div>
           )}
 
-          {/* ===== USERS ===== */}
+          {/* ===== STATISTICS ===== */}
+          {activeTab === "statistics" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Статистика проекта</h1>
+              <p className="text-sm text-muted-foreground mb-6">Подробная аналитика Atlantic</p>
+
+              {/* Users Stats */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Пользователи</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <StatCard icon={Users} label="Всего" value={String(users.length)} positive />
+                  <StatCard icon={Zap} label="Сегодня" value={`+${computedStats.newUsersToday}`} positive />
+                  <StatCard icon={Calendar} label="За неделю" value={`+${computedStats.newUsersWeek}`} positive />
+                  <StatCard icon={Calendar} label="За месяц" value={`+${computedStats.newUsersMonth}`} positive />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard icon={ShieldCheck} label="Верифицированных" value={String(computedStats.verifiedUsers)} positive />
+                  <StatCard icon={Ban} label="Заблокированных" value={String(computedStats.blockedUsers)} />
+                  <StatCard icon={Star} label="Средний рейтинг" value={computedStats.avgRating.toFixed(2)} positive />
+                  <StatCard icon={Hash} label="Заданий на пользователя" value={computedStats.avgTasksPerUser.toFixed(1)} />
+                </div>
+              </div>
+
+              {/* Level Distribution */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4">Распределение по уровням</h2>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: "Новичок", count: computedStats.levelDistribution.novice, color: "bg-muted" },
+                    { label: "Продвинутый", count: computedStats.levelDistribution.advanced, color: "bg-primary/20" },
+                    { label: "Эксперт", count: computedStats.levelDistribution.expert, color: "bg-accent/20" },
+                  ].map(l => (
+                    <div key={l.label} className={`glass rounded-2xl p-5 text-center`}>
+                      <div className="text-3xl font-bold mb-1">{l.count}</div>
+                      <div className="text-sm text-muted-foreground">{l.label}</div>
+                      <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${users.length ? (l.count / users.length * 100) : 0}%` }} />
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">{users.length ? (l.count / users.length * 100).toFixed(1) : 0}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Financial Stats */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary" /> Финансы</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <StatCard icon={DollarSign} label="Общий заработок" value={`${computedStats.totalEarned.toLocaleString("ru-RU")} ₽`} positive />
+                  <StatCard icon={ArrowDownRight} label="Выведено" value={`${computedStats.totalWithdrawn.toLocaleString("ru-RU")} ₽`} />
+                  <StatCard icon={DollarSign} label="На балансах" value={`${computedStats.totalBalance.toLocaleString("ru-RU")} ₽`} positive />
+                  <StatCard icon={DollarSign} label="Средний баланс" value={`${computedStats.avgBalance.toFixed(0)} ₽`} />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard icon={DollarSign} label="Выплачено" value={`${computedStats.totalPaidOut.toLocaleString("ru-RU")} ₽`} positive />
+                  <StatCard icon={Clock} label="Ожидают выплат" value={`${computedStats.pendingPaymentsAmount.toLocaleString("ru-RU")} ₽`} />
+                  <StatCard icon={ArrowUpRight} label="Выводов" value={String(computedStats.withdrawals)} />
+                  <StatCard icon={Award} label="Реф. бонусов" value={String(computedStats.refBonuses)} />
+                </div>
+              </div>
+
+              {/* Tasks Stats */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" /> Задания</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <StatCard icon={ClipboardList} label="Всего заданий" value={String(tasks.length)} positive />
+                  <StatCard icon={Activity} label="Активных" value={String(computedStats.activeTasks)} positive />
+                  <StatCard icon={Clock} label="На паузе" value={String(computedStats.pausedTasks)} />
+                  <StatCard icon={CheckCircle2} label="Завершённых" value={String(computedStats.completedTasks)} />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard icon={DollarSign} label="Средняя награда" value={`${computedStats.avgReward.toFixed(0)} ₽`} />
+                  <StatCard icon={Users} label="Всего мест" value={String(computedStats.totalSpots)} />
+                  <StatCard icon={UserCheck} label="Занято мест" value={String(computedStats.takenSpots)} />
+                  <StatCard icon={Percent} label="Заполненность" value={`${computedStats.totalSpots ? (computedStats.takenSpots / computedStats.totalSpots * 100).toFixed(1) : 0}%`} />
+                </div>
+              </div>
+
+              {/* Category Breakdown */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4">Задания по категориям</h2>
+                <div className="glass rounded-2xl overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left p-4 font-medium text-muted-foreground">Категория</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Всего</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Активных</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Доля</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {computedStats.categoryStats.map(c => (
+                        <tr key={c.id} className="border-b border-border/50">
+                          <td className="p-4 font-medium">{c.name}</td>
+                          <td className="p-4">{c.taskCount}</td>
+                          <td className="p-4">{c.activeCount}</td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-20 h-2 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${tasks.length ? (c.taskCount / tasks.length * 100) : 0}%` }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground">{tasks.length ? (c.taskCount / tasks.length * 100).toFixed(0) : 0}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Reports Stats */}
+              <div className="mb-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /> Отчёты</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard icon={FileText} label="Всего отчётов" value={String(reports.length)} />
+                  <StatCard icon={CheckCircle2} label="Одобренных" value={String(computedStats.approvedReports)} positive />
+                  <StatCard icon={XCircle} label="Отклонённых" value={String(computedStats.rejectedReports)} />
+                  <StatCard icon={Percent} label="Процент одобрений" value={`${computedStats.approvalRate.toFixed(1)}%`} positive />
+                </div>
+              </div>
+
+              {/* Top Users */}
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="glass rounded-2xl p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2"><DollarSign className="h-4 w-4 text-primary" /> Топ по заработку</h3>
+                  <div className="space-y-3">
+                    {computedStats.topEarners.map((u, i) => (
+                      <div key={u.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                          <div>
+                            <div className="text-sm font-medium">{u.full_name || u.email}</div>
+                            <div className="text-xs text-muted-foreground">{u.level}</div>
+                          </div>
+                        </div>
+                        <span className="font-semibold text-sm">{Number(u.total_earned).toLocaleString("ru-RU")} ₽</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="glass rounded-2xl p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2"><Award className="h-4 w-4 text-primary" /> Топ по заданиям</h3>
+                  <div className="space-y-3">
+                    {computedStats.topCompletions.map((u, i) => (
+                      <div key={u.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-full bg-accent/10 text-accent text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                          <div>
+                            <div className="text-sm font-medium">{u.full_name || u.email}</div>
+                            <div className="text-xs text-muted-foreground">Рейтинг: {Number(u.rating).toFixed(1)}</div>
+                          </div>
+                        </div>
+                        <span className="font-semibold text-sm">{u.tasks_completed || 0} заданий</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Referral Stats */}
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> Реферальная система</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <StatCard icon={Users} label="Рефералов" value={String(referrals.length)} positive />
+                  <StatCard icon={DollarSign} label="Бонусов выплачено" value={`${referrals.reduce((s, r) => s + Number(r.bonus_amount), 0).toLocaleString("ru-RU")} ₽`} positive />
+                  <StatCard icon={Hash} label="Рефереров" value={String(new Set(referrals.map(r => r.referrer_id)).size)} />
+                </div>
+              </div>
+            </motion.div>
+          )}
           {activeTab === "users" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-2xl font-display font-bold mb-1">Пользователи</h1>
                   <p className="text-sm text-muted-foreground">{users.length} зарегистрированных</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="rounded-xl" onClick={exportUsersCSV}>
+                    <Download className="h-3.5 w-3.5 mr-2" /> Экспорт CSV
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-xl text-destructive" onClick={() => bulkBlockUsers(true)}>
+                    <Ban className="h-3.5 w-3.5 mr-2" /> Массовая блок.
+                  </Button>
                 </div>
               </div>
               <div className="relative mb-6">
@@ -871,6 +1242,12 @@ const Admin = () => {
                               </Button>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Начислить 1000₽" onClick={() => updateUserBalance(u.user_id, 1000)}>
                                 <DollarSign className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Сбросить статистику" onClick={() => resetUserStats(u.user_id)}>
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Очистить уведомления" onClick={() => clearUserNotifications(u.user_id)}>
+                                <Bell className="h-3.5 w-3.5" />
                               </Button>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => blockUser(u.user_id, !u.is_blocked)}>
                                 <Ban className="h-3.5 w-3.5" />
@@ -1019,22 +1396,26 @@ const Admin = () => {
                           {t.task_categories?.name} · {Number(t.reward).toLocaleString("ru-RU")} ₽ · {t.difficulty}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={cn("text-xs",
-                          t.status === "active" ? "border-accent/30 text-accent" :
-                          t.status === "paused" ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30"
-                        )}>{t.status === "active" ? "Активно" : t.status === "paused" ? "Пауза" : "Завершено"}</Badge>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditTask(t)}>
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => deleteTask(t.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn("text-xs",
+                            t.status === "active" ? "border-accent/30 text-accent" :
+                            t.status === "paused" ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30"
+                          )}>{t.status === "active" ? "Активно" : t.status === "paused" ? "Пауза" : "Завершено"}</Badge>
+                          <span className="text-xs text-muted-foreground">{t.taken_spots}/{t.total_spots} мест</span>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Редактировать" onClick={() => openEditTask(t)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Дублировать" onClick={() => duplicateTask(t)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => deleteTask(t.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
               {/* Task Edit Modal */}
               <AnimatePresence>
@@ -1126,14 +1507,55 @@ const Admin = () => {
           {/* ===== FINANCE ===== */}
           {activeTab === "finance" && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-2xl font-display font-bold mb-1">Финансы</h1>
-              <p className="text-sm text-muted-foreground mb-6">Транзакции и выплаты</p>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h1 className="text-2xl font-display font-bold mb-1">Финансы</h1>
+                  <p className="text-sm text-muted-foreground">Транзакции и выплаты</p>
+                </div>
+                <Button variant="outline" size="sm" className="rounded-xl" onClick={exportTransactionsCSV}>
+                  <Download className="h-3.5 w-3.5 mr-2" /> Экспорт CSV
+                </Button>
+              </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard icon={DollarSign} label="Всего выплачено" value={`${stats.totalPaid.toLocaleString("ru-RU")} ₽`} positive />
                 <StatCard icon={Clock} label="Ожидают" value={`${pendingPayments.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("ru-RU")} ₽`} />
                 <StatCard icon={ArrowUpRight} label="Выводы" value={String(transactions.filter(t => t.type === "withdrawal").length)} />
                 <StatCard icon={ArrowDownRight} label="Начисления" value={String(transactions.filter(t => t.type !== "withdrawal").length)} />
               </div>
+
+              {/* Manual payment form */}
+              <div className="glass rounded-2xl p-6 mb-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Plus className="h-4 w-4" /> Создать платёж вручную</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <Label className="text-xs">Пользователь</Label>
+                    <Select value={manualPayUserId} onValueChange={setManualPayUserId}>
+                      <SelectTrigger><SelectValue placeholder="Выберите" /></SelectTrigger>
+                      <SelectContent>{users.map(u => <SelectItem key={u.user_id} value={u.user_id}>{u.full_name || u.email}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Сумма (₽)</Label>
+                    <Input type="number" value={manualPayAmount} onChange={e => setManualPayAmount(e.target.value)} placeholder="1000" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Тип</Label>
+                    <Select value={manualPayType} onValueChange={setManualPayType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="reward">Награда</SelectItem>
+                        <SelectItem value="referral_bonus">Реф. бонус</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Описание</Label>
+                    <Input value={manualPayDesc} onChange={e => setManualPayDesc(e.target.value)} placeholder="Причина" />
+                  </div>
+                </div>
+                <Button className="gradient-accent text-accent-foreground border-0" onClick={createManualPayment}><Plus className="h-4 w-4 mr-2" /> Создать</Button>
+              </div>
+
               <div className="glass rounded-2xl overflow-hidden">
                 <div className="p-5 border-b border-border"><h3 className="font-semibold">Транзакции</h3></div>
                 <div className="overflow-x-auto">
@@ -1171,12 +1593,17 @@ const Admin = () => {
                             </span>
                           </td>
                           <td className="p-4">
-                            {t.status === "pending" && (
-                              <div className="flex gap-1">
-                                <Button size="sm" variant="outline" className="h-7 text-xs text-accent" onClick={() => approvePayment(t.id)}>Подтвердить</Button>
-                                <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => rejectPayment(t.id)}>Отклонить</Button>
-                              </div>
-                            )}
+                            <div className="flex gap-1">
+                              {t.status === "pending" && (
+                                <>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs text-accent" onClick={() => approvePayment(t.id)}>Подтвердить</Button>
+                                  <Button size="sm" variant="outline" className="h-7 text-xs text-destructive" onClick={() => rejectPayment(t.id)}>Отклонить</Button>
+                                </>
+                              )}
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => deletePayment(t.id)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1310,9 +1737,21 @@ const Admin = () => {
                   <Input value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="Заголовок" />
                   <Textarea value={notifMessage} onChange={e => setNotifMessage(e.target.value)} placeholder="Сообщение" rows={3} />
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <Button className="gradient-accent text-accent-foreground border-0" onClick={sendNotification}><Send className="h-4 w-4 mr-2" /> Отправить</Button>
                   <Button variant="outline" onClick={sendBroadcast}><Megaphone className="h-4 w-4 mr-2" /> Рассылка всем</Button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Select value={bulkNotifLevel} onValueChange={setBulkNotifLevel}>
+                      <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все уровни</SelectItem>
+                        <SelectItem value="Новичок">Новичок</SelectItem>
+                        <SelectItem value="Продвинутый">Продвинутый</SelectItem>
+                        <SelectItem value="Эксперт">Эксперт</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" onClick={sendBulkByLevel}><Filter className="h-4 w-4 mr-2" /> По уровню</Button>
+                  </div>
                 </div>
               </div>
               <div className="glass rounded-2xl p-6">
