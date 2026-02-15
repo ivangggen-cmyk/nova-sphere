@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Clock, ChevronRight, Building2, Users, Shield, Plane, Banknote } from "lucide-react";
+import { Search, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
@@ -80,9 +80,7 @@ const Tasks = () => {
                     <Badge variant="outline" className="shrink-0 text-[11px]">{task.task_categories?.name}</Badge>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {task.deadline && <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> до {new Date(task.deadline).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}</span>}
                     <span className={`px-2 py-0.5 rounded-lg text-[11px] font-medium ${difficultyColors[task.difficulty] || ""}`}>{task.difficulty}</span>
-                    <span>Мест: {task.taken_spots}/{task.total_spots}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 ml-4 shrink-0">
