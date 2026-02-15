@@ -1,84 +1,118 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CreditCard, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
-const transactions = [
-  { id: 1, type: "in", title: "Задание «Регистрация FinApp»", amount: "+850 ₽", date: "14 фев 2026", status: "completed" },
-  { id: 2, type: "out", title: "Вывод на карту *4523", amount: "-5 000 ₽", date: "12 фев 2026", status: "completed" },
-  { id: 3, type: "in", title: "Реферальный бонус", amount: "+420 ₽", date: "10 фев 2026", status: "completed" },
-  { id: 4, type: "in", title: "Задание «Обзор BankX»", amount: "+1 200 ₽", date: "8 фев 2026", status: "pending" },
-  { id: 5, type: "out", title: "Вывод на кошелёк", amount: "-3 000 ₽", date: "5 фев 2026", status: "completed" },
-  { id: 6, type: "in", title: "Задание «Маркетинговый опрос»", amount: "+300 ₽", date: "3 фев 2026", status: "completed" },
-];
+const Payments = () => {
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [requesting, setRequesting] = useState(false);
 
-const Payments = () => (
-  <DashboardLayout>
-    <div className="mb-6">
-      <h1 className="text-2xl font-bold mb-1">История выплат</h1>
-      <p className="text-sm text-muted-foreground">Все транзакции вашего аккаунта</p>
-    </div>
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false })
+      .then(({ data }) => { setTransactions(data || []); setLoading(false); });
+  }, [user]);
 
-    <div className="grid sm:grid-cols-3 gap-4 mb-8">
-      {[
-        { label: "Общий доход", value: "48 200 ₽", icon: CreditCard },
-        { label: "Выведено", value: "23 000 ₽", icon: ArrowUpRight },
-        { label: "На балансе", value: "24 580 ₽", icon: ArrowDownRight },
-      ].map((s) => (
-        <motion.div
-          key={s.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl p-5"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <s.icon className="h-5 w-5 text-accent" />
+  const handleWithdrawRequest = async () => {
+    if (!user || !withdrawAmount) return;
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) { toast({ title: "Некорректная сумма", variant: "destructive" }); return; }
+    if (amount > (profile?.balance || 0)) { toast({ title: "Недостаточно средств", variant: "destructive" }); return; }
+    
+    setRequesting(true);
+    try {
+      const { error } = await supabase.from("payments").insert({
+        user_id: user.id, amount, type: "withdrawal" as const, status: "pending" as const,
+        description: "Запрос на вывод средств"
+      });
+      if (error) throw error;
+      toast({ title: "Запрос отправлен", description: "Ожидайте подтверждения администратора" });
+      setWithdrawAmount("");
+      // Refresh
+      const { data } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      setTransactions(data || []);
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    } finally { setRequesting(false); }
+  };
+
+  const totalIn = transactions.filter(t => t.type !== "withdrawal").reduce((s, t) => s + Number(t.amount), 0);
+  const totalOut = transactions.filter(t => t.type === "withdrawal" && t.status !== "rejected").reduce((s, t) => s + Number(t.amount), 0);
+
+  return (
+    <DashboardLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-1">История выплат</h1>
+        <p className="text-sm text-muted-foreground">Все транзакции вашего аккаунта</p>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-4 mb-8">
+        {[
+          { label: "Общий доход", value: `${totalIn.toLocaleString("ru-RU")} ₽`, icon: CreditCard },
+          { label: "Выведено", value: `${totalOut.toLocaleString("ru-RU")} ₽`, icon: ArrowUpRight },
+          { label: "На балансе", value: `${Number(profile?.balance || 0).toLocaleString("ru-RU")} ₽`, icon: ArrowDownRight },
+        ].map((s) => (
+          <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-5">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center"><s.icon className="h-5 w-5 text-accent" /></div>
             </div>
-          </div>
-          <div className="text-2xl font-bold">{s.value}</div>
-          <div className="text-xs text-muted-foreground">{s.label}</div>
-        </motion.div>
-      ))}
-    </div>
-
-    <div className="glass rounded-2xl p-6">
-      <h3 className="font-semibold mb-4">Транзакции</h3>
-      <div className="space-y-2">
-        {transactions.map((tx, i) => (
-          <motion.div
-            key={tx.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center ${tx.type === "in" ? "bg-accent/10" : "bg-destructive/10"}`}>
-                {tx.type === "in" ? (
-                  <ArrowDownRight className="h-4 w-4 text-accent" />
-                ) : (
-                  <ArrowUpRight className="h-4 w-4 text-destructive" />
-                )}
-              </div>
-              <div>
-                <div className="text-sm font-medium">{tx.title}</div>
-                <div className="text-xs text-muted-foreground">{tx.date}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className={`text-sm font-semibold ${tx.type === "in" ? "text-accent" : "text-destructive"}`}>
-                {tx.amount}
-              </span>
-              <Badge variant={tx.status === "completed" ? "default" : "outline"} className="text-xs">
-                {tx.status === "completed" ? "Завершено" : "В обработке"}
-              </Badge>
-            </div>
+            <div className="text-2xl font-bold">{s.value}</div>
+            <div className="text-xs text-muted-foreground">{s.label}</div>
           </motion.div>
         ))}
       </div>
-    </div>
-  </DashboardLayout>
-);
+
+      <div className="glass rounded-2xl p-6 mb-6">
+        <h3 className="font-semibold mb-3">Запросить вывод</h3>
+        <div className="flex gap-3">
+          <Input type="number" placeholder="Сумма вывода" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} className="max-w-xs" />
+          <Button className="gradient-accent text-accent-foreground border-0" onClick={handleWithdrawRequest} disabled={requesting}>
+            {requesting ? "Отправка..." : "Запросить"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="glass rounded-2xl p-6">
+        <h3 className="font-semibold mb-4">Транзакции</h3>
+        {loading ? <p className="text-muted-foreground">Загрузка...</p> : transactions.length === 0 ? <p className="text-muted-foreground text-sm">Нет транзакций</p> : (
+          <div className="space-y-2">
+            {transactions.map((tx, i) => (
+              <motion.div key={tx.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
+                className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${tx.type !== "withdrawal" ? "bg-accent/10" : "bg-destructive/10"}`}>
+                    {tx.type !== "withdrawal" ? <ArrowDownRight className="h-4 w-4 text-accent" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{tx.description || (tx.type === "withdrawal" ? "Вывод" : tx.type === "reward" ? "Награда" : "Реф. бонус")}</div>
+                    <div className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString("ru-RU")}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-semibold ${tx.type !== "withdrawal" ? "text-accent" : "text-destructive"}`}>
+                    {tx.type !== "withdrawal" ? "+" : "-"}{Number(tx.amount).toLocaleString("ru-RU")} ₽
+                  </span>
+                  <Badge variant={tx.status === "completed" || tx.status === "approved" ? "default" : "outline"} className="text-xs">
+                    {tx.status === "completed" || tx.status === "approved" ? "Завершено" : tx.status === "pending" ? "Ожидание" : "Отклонено"}
+                  </Badge>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+};
 
 export default Payments;
