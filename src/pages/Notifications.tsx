@@ -1,33 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, CheckCircle2, Info, AlertTriangle, Gift, Clock } from "lucide-react";
+import { Bell, CheckCircle2, Info, AlertTriangle, Gift, Clock, Settings } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
-const initialNotifications = [
-  { id: 1, type: "success", icon: CheckCircle2, title: "Отчёт одобрен", desc: "Ваш отчёт по заданию «Открой ИП» был одобрен. Вознаграждение 3 500 ₽ зачислено.", time: "30 мин назад", read: false },
-  { id: 2, type: "info", icon: Info, title: "Новое задание доступно", desc: "Появилось новое задание в категории «Подбор персонала» с вознаграждением 2 200 ₽.", time: "2 часа назад", read: false },
-  { id: 3, type: "warning", icon: AlertTriangle, title: "Дедлайн приближается", desc: "Задание «Найди курьера для Яндекс Еда» истекает через 2 дня.", time: "5 часов назад", read: false },
-  { id: 4, type: "bonus", icon: Gift, title: "Бонус за активность", desc: "Вы получили бонус 500 ₽ за выполнение 5 заданий подряд!", time: "Вчера", read: true },
-  { id: 5, type: "success", icon: CheckCircle2, title: "Выплата обработана", desc: "Выплата 5 000 ₽ отправлена на вашу карту *4521.", time: "2 дня назад", read: true },
-  { id: 6, type: "info", icon: Info, title: "Реферал зарегистрировался", desc: "Ваш реферал Дмитрий П. зарегистрировался на платформе.", time: "3 дня назад", read: true },
-];
-
-const typeColors: Record<string, string> = {
-  success: "text-accent",
-  info: "text-primary",
-  warning: "text-amber-500",
-  bonus: "text-purple-500",
+const typeConfig: Record<string, { icon: any; color: string }> = {
+  success: { icon: CheckCircle2, color: "text-accent" },
+  info: { icon: Info, color: "text-primary" },
+  warning: { icon: AlertTriangle, color: "text-amber-500" },
+  bonus: { icon: Gift, color: "text-purple-500" },
+  system: { icon: Settings, color: "text-muted-foreground" },
 };
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setNotifications(data || []);
+        setLoading(false);
+      });
+  }, [user]);
+
+  const markAllRead = async () => {
+    if (!user) return;
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    
+    await supabase.from("notifications").update({ is_read: true }).in("id", unreadIds);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const markOneRead = async (id: string) => {
+    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <DashboardLayout>
@@ -43,34 +62,42 @@ const Notifications = () => {
         )}
       </div>
 
-      <div className="space-y-3">
-        {notifications.map((n, i) => {
-          const Icon = n.icon;
-          return (
-            <motion.div
-              key={n.id}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className={`flex items-start gap-4 p-4 rounded-xl glass transition-all ${!n.read ? "ring-1 ring-accent/20" : "opacity-75"}`}
-            >
-              <div className={`mt-0.5 ${typeColors[n.type]}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-medium text-sm">{n.title}</span>
-                  {!n.read && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground">Загрузка...</div>
+      ) : notifications.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">Нет уведомлений</div>
+      ) : (
+        <div className="space-y-3">
+          {notifications.map((n, i) => {
+            const cfg = typeConfig[n.type] || typeConfig.info;
+            const Icon = cfg.icon;
+            return (
+              <motion.div
+                key={n.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className={`flex items-start gap-4 p-4 rounded-xl glass transition-all cursor-pointer ${!n.is_read ? "ring-1 ring-accent/20" : "opacity-75"}`}
+                onClick={() => !n.is_read && markOneRead(n.id)}
+              >
+                <div className={`mt-0.5 ${cfg.color}`}>
+                  <Icon className="h-5 w-5" />
                 </div>
-                <p className="text-sm text-muted-foreground">{n.desc}</p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                  <Clock className="h-3 w-3" /> {n.time}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-medium text-sm">{n.title}</span>
+                    {!n.is_read && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{n.message}</p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                    <Clock className="h-3 w-3" /> {new Date(n.created_at).toLocaleDateString("ru-RU")}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </DashboardLayout>
   );
 };
