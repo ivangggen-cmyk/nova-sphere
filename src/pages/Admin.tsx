@@ -99,8 +99,9 @@ const Admin = () => {
   const [newTaskReward, setNewTaskReward] = useState("");
   const [newTaskCategory, setNewTaskCategory] = useState("");
   const [newTaskDifficulty, setNewTaskDifficulty] = useState("Легко");
-  const [newTaskSpots, setNewTaskSpots] = useState("50");
-  const [newTaskDeadline, setNewTaskDeadline] = useState("");
+  const [newTaskLinkUrl, setNewTaskLinkUrl] = useState("");
+  const [newTaskRequirements, setNewTaskRequirements] = useState("");
+  const [newTaskRecommendations, setNewTaskRecommendations] = useState("");
   const [newTaskSteps, setNewTaskSteps] = useState("");
   const [newTaskCriteria, setNewTaskCriteria] = useState("");
   
@@ -120,10 +121,18 @@ const Admin = () => {
   const [notifMessage, setNotifMessage] = useState("");
   const [notifType, setNotifType] = useState<string>("info");
   
-  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<any | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [editTaskDesc, setEditTaskDesc] = useState("");
   const [editTaskReward, setEditTaskReward] = useState("");
   const [editTaskStatus, setEditTaskStatus] = useState("");
+  const [editTaskDifficulty, setEditTaskDifficulty] = useState("");
+  const [editTaskCategory, setEditTaskCategory] = useState("");
+  const [editTaskLinkUrl, setEditTaskLinkUrl] = useState("");
+  const [editTaskRequirements, setEditTaskRequirements] = useState("");
+  const [editTaskRecommendations, setEditTaskRecommendations] = useState("");
+  const [editTaskSteps, setEditTaskSteps] = useState("");
+  const [editTaskCriteria, setEditTaskCriteria] = useState("");
 
   // User editing state
   const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -259,15 +268,17 @@ const Admin = () => {
     const { error, data } = await supabase.from("tasks").insert({
       title: newTaskTitle, description: newTaskDesc, reward: parseFloat(newTaskReward) || 0,
       category_id: newTaskCategory, difficulty: newTaskDifficulty,
-      total_spots: parseInt(newTaskSpots) || 50,
-      deadline: newTaskDeadline || null,
+      link_url: newTaskLinkUrl,
+      requirements: newTaskRequirements ? newTaskRequirements.split("\n").filter(Boolean) : [],
+      recommendations: newTaskRecommendations ? newTaskRecommendations.split("\n").filter(Boolean) : [],
       steps: newTaskSteps ? newTaskSteps.split("\n").filter(Boolean) : [],
       criteria: newTaskCriteria ? newTaskCriteria.split("\n").filter(Boolean) : [],
       created_by: user?.id,
-    }).select("*, task_categories(name)");
+    } as any).select("*, task_categories(name)");
     if (error) { toast({ title: "Ошибка", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => [data![0], ...prev]);
     setNewTaskTitle(""); setNewTaskDesc(""); setNewTaskReward(""); setNewTaskSteps(""); setNewTaskCriteria("");
+    setNewTaskLinkUrl(""); setNewTaskRequirements(""); setNewTaskRecommendations("");
     toast({ title: "Задание создано" });
   };
 
@@ -277,13 +288,40 @@ const Admin = () => {
     toast({ title: `Статус задания: ${status}` });
   };
 
+  const openEditTask = (t: any) => {
+    setEditingTask(t);
+    setEditTaskTitle(t.title || "");
+    setEditTaskDesc(t.description || "");
+    setEditTaskReward(String(t.reward || 0));
+    setEditTaskStatus(t.status || "active");
+    setEditTaskDifficulty(t.difficulty || "Легко");
+    setEditTaskCategory(t.category_id || "");
+    setEditTaskLinkUrl(t.link_url || "");
+    setEditTaskRequirements((t.requirements || []).join("\n"));
+    setEditTaskRecommendations((t.recommendations || []).join("\n"));
+    setEditTaskSteps((t.steps || []).join("\n"));
+    setEditTaskCriteria((t.criteria || []).join("\n"));
+  };
+
   const saveEditTask = async () => {
     if (!editingTask) return;
-    await supabase.from("tasks").update({
-      title: editTaskTitle, reward: parseFloat(editTaskReward) || 0,
+    const updates: any = {
+      title: editTaskTitle,
+      description: editTaskDesc,
+      reward: parseFloat(editTaskReward) || 0,
       status: editTaskStatus as any,
-    }).eq("id", editingTask);
-    setTasks(prev => prev.map(t => t.id === editingTask ? { ...t, title: editTaskTitle, reward: parseFloat(editTaskReward), status: editTaskStatus } : t));
+      difficulty: editTaskDifficulty,
+      category_id: editTaskCategory,
+      link_url: editTaskLinkUrl,
+      requirements: editTaskRequirements ? editTaskRequirements.split("\n").filter(Boolean) : [],
+      recommendations: editTaskRecommendations ? editTaskRecommendations.split("\n").filter(Boolean) : [],
+      steps: editTaskSteps ? editTaskSteps.split("\n").filter(Boolean) : [],
+      criteria: editTaskCriteria ? editTaskCriteria.split("\n").filter(Boolean) : [],
+    };
+    await supabase.from("tasks").update(updates).eq("id", editingTask.id);
+    // Refetch to get category name
+    const { data: updated } = await supabase.from("tasks").select("*, task_categories(name)").eq("id", editingTask.id).single();
+    setTasks(prev => prev.map(t => t.id === editingTask.id ? (updated || { ...t, ...updates }) : t));
     setEditingTask(null);
     toast({ title: "Задание обновлено" });
   };
@@ -372,8 +410,19 @@ const Admin = () => {
       await supabase.from("user_tasks").update({ status: "approved" as const, completed_at: new Date().toISOString() }).eq("id", report.user_task_id);
       const { data: ut } = await supabase.from("user_tasks").select("*, tasks(reward)").eq("id", report.user_task_id).single();
       if (ut?.tasks?.reward && report?.user_id) {
-        await createPayment(report.user_id, Number(ut.tasks.reward), "reward", `Награда за задание`);
-        await supabase.from("profiles").update({ tasks_completed: (users.find(u => u.user_id === report.user_id)?.tasks_completed || 0) + 1 }).eq("user_id", report.user_id);
+        const baseReward = Number(ut.tasks.reward);
+        // Calculate level bonus
+        const userProfile = users.find(u => u.user_id === report.user_id);
+        const userLevel = userProfile?.level || "Новичок";
+        const levelBonusKey = userLevel === "Эксперт" ? "level_bonus_expert" : userLevel === "Продвинутый" ? "level_bonus_advanced" : "level_bonus_novice";
+        const bonusSetting = platformSettings.find(s => s.key === levelBonusKey);
+        const bonusPercent = parseFloat(bonusSetting?.value || "0");
+        const bonusAmount = Math.round(baseReward * bonusPercent / 100);
+        const totalReward = baseReward + bonusAmount;
+        
+        await createPayment(report.user_id, totalReward, "reward", `Награда за задание${bonusAmount > 0 ? ` (+${bonusPercent}% бонус уровня ${userLevel})` : ""}`);
+        await supabase.from("profiles").update({ tasks_completed: (userProfile?.tasks_completed || 0) + 1 }).eq("user_id", report.user_id);
+        setUsers(prev => prev.map(u => u.user_id === report.user_id ? { ...u, tasks_completed: (u.tasks_completed || 0) + 1 } : u));
       }
       if (report?.user_id) {
         await supabase.from("notifications").insert({ user_id: report.user_id, type: "success" as const, title: "Отчёт одобрен!", message: "Ваш отчёт был одобрен. Вознаграждение начислено." });
@@ -898,11 +947,12 @@ const Admin = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div><Label className="text-xs">Мест</Label><Input type="number" value={newTaskSpots} onChange={e => setNewTaskSpots(e.target.value)} /></div>
-                  <div><Label className="text-xs">Дедлайн</Label><Input type="datetime-local" value={newTaskDeadline} onChange={e => setNewTaskDeadline(e.target.value)} /></div>
+                  <div className="md:col-span-2"><Label className="text-xs">Ссылка для выполнения</Label><Input value={newTaskLinkUrl} onChange={e => setNewTaskLinkUrl(e.target.value)} placeholder="https://example.com" /></div>
                 </div>
                 <div className="space-y-4 mb-4">
                   <div><Label className="text-xs">Описание</Label><Textarea value={newTaskDesc} onChange={e => setNewTaskDesc(e.target.value)} rows={2} /></div>
+                  <div><Label className="text-xs">Требования (каждое с новой строки)</Label><Textarea value={newTaskRequirements} onChange={e => setNewTaskRequirements(e.target.value)} rows={3} /></div>
+                  <div><Label className="text-xs">Рекомендации (каждая с новой строки)</Label><Textarea value={newTaskRecommendations} onChange={e => setNewTaskRecommendations(e.target.value)} rows={2} /></div>
                   <div><Label className="text-xs">Шаги (каждый с новой строки)</Label><Textarea value={newTaskSteps} onChange={e => setNewTaskSteps(e.target.value)} rows={3} /></div>
                   <div><Label className="text-xs">Критерии проверки</Label><Textarea value={newTaskCriteria} onChange={e => setNewTaskCriteria(e.target.value)} rows={2} /></div>
                 </div>
@@ -917,48 +967,84 @@ const Admin = () => {
               <div className="space-y-3">
                 {filteredTasks.map(t => (
                   <div key={t.id} className="glass rounded-xl p-4">
-                    {editingTask === t.id ? (
-                      <div className="space-y-3">
-                        <Input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} />
-                        <div className="flex gap-3">
-                          <Input type="number" value={editTaskReward} onChange={e => setEditTaskReward(e.target.value)} className="w-32" />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{t.title}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {t.task_categories?.name} · {Number(t.reward).toLocaleString("ru-RU")} ₽ · {t.difficulty}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={cn("text-xs",
+                          t.status === "active" ? "border-accent/30 text-accent" :
+                          t.status === "paused" ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30"
+                        )}>{t.status === "active" ? "Активно" : t.status === "paused" ? "Пауза" : "Завершено"}</Badge>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditTask(t)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => deleteTask(t.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Task Edit Modal */}
+              <AnimatePresence>
+                {editingTask && (
+                  <>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={() => setEditingTask(null)} />
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl bg-card border border-border rounded-2xl shadow-elevated p-6 max-h-[85vh] overflow-y-auto">
+                      <h3 className="font-display font-semibold text-lg mb-4">Редактирование задания</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div><Label className="text-xs">Название</Label><Input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="mt-1" /></div>
+                        <div><Label className="text-xs">Категория</Label>
+                          <Select value={editTaskCategory} onValueChange={setEditTaskCategory}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </div>
+                        <div><Label className="text-xs">Награда (₽)</Label><Input type="number" value={editTaskReward} onChange={e => setEditTaskReward(e.target.value)} className="mt-1" /></div>
+                        <div><Label className="text-xs">Сложность</Label>
+                          <Select value={editTaskDifficulty} onValueChange={setEditTaskDifficulty}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Легко">Легко</SelectItem>
+                              <SelectItem value="Средне">Средне</SelectItem>
+                              <SelectItem value="Сложно">Сложно</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div><Label className="text-xs">Статус</Label>
                           <Select value={editTaskStatus} onValueChange={setEditTaskStatus}>
-                            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="active">Активно</SelectItem>
                               <SelectItem value="paused">Пауза</SelectItem>
                               <SelectItem value="completed">Завершено</SelectItem>
                             </SelectContent>
                           </Select>
-                          <Button size="sm" className="gradient-accent text-accent-foreground border-0" onClick={saveEditTask}>Сохранить</Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingTask(null)}>Отмена</Button>
                         </div>
+                        <div><Label className="text-xs">Ссылка для выполнения</Label><Input value={editTaskLinkUrl} onChange={e => setEditTaskLinkUrl(e.target.value)} className="mt-1" /></div>
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{t.title}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {t.task_categories?.name} · {Number(t.reward).toLocaleString("ru-RU")} ₽ · {t.taken_spots}/{t.total_spots} мест
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={cn("text-xs",
-                            t.status === "active" ? "border-accent/30 text-accent" :
-                            t.status === "paused" ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30"
-                          )}>{t.status === "active" ? "Активно" : t.status === "paused" ? "Пауза" : "Завершено"}</Badge>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingTask(t.id); setEditTaskTitle(t.title); setEditTaskReward(String(t.reward)); setEditTaskStatus(t.status); }}>
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => deleteTask(t.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                      <div className="space-y-4 mb-4">
+                        <div><Label className="text-xs">Описание</Label><Textarea value={editTaskDesc} onChange={e => setEditTaskDesc(e.target.value)} rows={2} className="mt-1" /></div>
+                        <div><Label className="text-xs">Требования (каждое с новой строки)</Label><Textarea value={editTaskRequirements} onChange={e => setEditTaskRequirements(e.target.value)} rows={3} className="mt-1" /></div>
+                        <div><Label className="text-xs">Рекомендации (каждая с новой строки)</Label><Textarea value={editTaskRecommendations} onChange={e => setEditTaskRecommendations(e.target.value)} rows={2} className="mt-1" /></div>
+                        <div><Label className="text-xs">Шаги</Label><Textarea value={editTaskSteps} onChange={e => setEditTaskSteps(e.target.value)} rows={3} className="mt-1" /></div>
+                        <div><Label className="text-xs">Критерии проверки</Label><Textarea value={editTaskCriteria} onChange={e => setEditTaskCriteria(e.target.value)} rows={2} className="mt-1" /></div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      <div className="flex gap-3">
+                        <Button className="gradient-primary text-primary-foreground border-0 rounded-xl" onClick={saveEditTask}>Сохранить</Button>
+                        <Button variant="outline" className="rounded-xl" onClick={() => setEditingTask(null)}>Отмена</Button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 

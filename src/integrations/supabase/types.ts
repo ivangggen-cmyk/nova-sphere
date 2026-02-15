@@ -368,7 +368,10 @@ export type Database = {
           description: string
           difficulty: string
           id: string
+          link_url: string | null
           materials: string[] | null
+          recommendations: string[] | null
+          requirements: string[] | null
           reward: number
           status: Database["public"]["Enums"]["task_status"]
           steps: string[] | null
@@ -386,7 +389,10 @@ export type Database = {
           description?: string
           difficulty?: string
           id?: string
+          link_url?: string | null
           materials?: string[] | null
+          recommendations?: string[] | null
+          requirements?: string[] | null
           reward?: number
           status?: Database["public"]["Enums"]["task_status"]
           steps?: string[] | null
@@ -404,7 +410,10 @@ export type Database = {
           description?: string
           difficulty?: string
           id?: string
+          link_url?: string | null
           materials?: string[] | null
+          recommendations?: string[] | null
+          requirements?: string[] | null
           reward?: number
           status?: Database["public"]["Enums"]["task_status"]
           steps?: string[] | null
