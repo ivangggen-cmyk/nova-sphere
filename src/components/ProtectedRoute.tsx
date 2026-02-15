@@ -1,8 +1,9 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import BlockedUserScreen from "@/components/BlockedUserScreen";
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, profile } = useAuth();
 
   if (loading) {
     return (
@@ -13,6 +14,10 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  
+  // Block access for blocked users
+  if (profile?.is_blocked) return <BlockedUserScreen />;
+  
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
