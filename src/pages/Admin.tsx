@@ -7,7 +7,7 @@ import {
   Edit, Trash2, CheckCircle2, XCircle, Clock, DollarSign, TrendingUp,
   Globe, Lock, Megaphone, RefreshCw,
   Activity, Award, Send, ShieldCheck, Tag, Layers, ChevronDown, Menu, X,
-  ArrowUpRight, ArrowDownRight
+  ArrowUpRight, ArrowDownRight, Image, UserCheck, UsersRound, Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ const adminNav = [
   { label: "Категории", icon: Tag, tab: "categories" },
   { label: "Финансы", icon: CreditCard, tab: "finance" },
   { label: "Отчёты", icon: FileText, tab: "reports" },
+  { label: "Верификация", icon: UserCheck, tab: "verification" },
+  { label: "Команда", icon: UsersRound, tab: "team" },
   { label: "Рефералы", icon: TrendingUp, tab: "referrals" },
   { label: "Уведомления", icon: Bell, tab: "notifications" },
   { label: "Контент", icon: Megaphone, tab: "content" },
@@ -104,6 +106,7 @@ const Admin = () => {
   const [newTaskRecommendations, setNewTaskRecommendations] = useState("");
   const [newTaskSteps, setNewTaskSteps] = useState("");
   const [newTaskCriteria, setNewTaskCriteria] = useState("");
+  const [newTaskImageFile, setNewTaskImageFile] = useState<File | null>(null);
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDesc, setNewCategoryDesc] = useState("");
@@ -143,11 +146,21 @@ const Admin = () => {
   const [editUserRating, setEditUserRating] = useState("");
   const [editUserLevel, setEditUserLevel] = useState("");
   const [viewingUserReqs, setViewingUserReqs] = useState<string | null>(null);
+  
+  // Verification requests
+  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
+  const [viewingVerifDoc, setViewingVerifDoc] = useState<string | null>(null);
+  
+  // Team members
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [newTeamUserId, setNewTeamUserId] = useState("");
+  const [newTeamPosition, setNewTeamPosition] = useState("");
+  const [newTeamAccess, setNewTeamAccess] = useState<string[]>([]);
 
   const [stats, setStats] = useState({ users: 0, activeTasks: 0, totalPaid: 0, pendingReports: 0 });
 
   const fetchAll = useCallback(async () => {
-    const [usersR, tasksR, catsR, txR, reportsR, refsR, settingsR, logsR, bannersR, newsR, notifsR, reqsR] = await Promise.all([
+    const [usersR, tasksR, catsR, txR, reportsR, refsR, settingsR, logsR, bannersR, newsR, notifsR, reqsR, verifR, teamR] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*, task_categories(name)").order("created_at", { ascending: false }),
       supabase.from("task_categories").select("*").order("name"),
@@ -160,6 +173,8 @@ const Admin = () => {
       supabase.from("news").select("*").order("created_at", { ascending: false }),
       supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("user_requisites").select("*").order("created_at", { ascending: false }),
+      supabase.from("verification_requests" as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("team_members" as any).select("*").order("created_at", { ascending: false }),
     ]);
 
     const profilesData = usersR.data || [];
@@ -186,6 +201,15 @@ const Admin = () => {
     setBanners(bannersR.data || []);
     setNews(newsR.data || []);
     setAllRequisites(enriched(reqsR.data || []));
+    
+    // Verification requests enriched
+    const verifEnriched = (verifR.data || []).map((v: any) => ({ ...v, profiles: profileMap.get(v.user_id) || null }));
+    setVerificationRequests(verifEnriched);
+    
+    // Team members enriched
+    const teamEnriched = (teamR.data || []).map((t: any) => ({ ...t, profiles: profileMap.get(t.user_id) || null }));
+    setTeamMembers(teamEnriched);
+    
     const totalPaid = (txR.data || []).filter((t: any) => t.status === "completed" || t.status === "approved").reduce((s: number, t: any) => s + Number(t.amount), 0);
     const pendingReports = (reportsR.data || []).filter((r: any) => r.status === "pending").length;
     const activeTasks = (tasksR.data || []).filter((t: any) => t.status === "active").length;
@@ -265,10 +289,21 @@ const Admin = () => {
   // ====== TASK ACTIONS ======
   const createTask = async () => {
     if (!newTaskTitle || !newTaskCategory) { toast({ title: "Заполните название и категорию", variant: "destructive" }); return; }
+    
+    let imageUrl = "";
+    if (newTaskImageFile) {
+      const path = `task_${Date.now()}.${newTaskImageFile.name.split('.').pop()}`;
+      const { error: upErr } = await supabase.storage.from("task-images").upload(path, newTaskImageFile);
+      if (upErr) { toast({ title: "Ошибка загрузки изображения", description: upErr.message, variant: "destructive" }); return; }
+      const { data: urlData } = supabase.storage.from("task-images").getPublicUrl(path);
+      imageUrl = urlData.publicUrl;
+    }
+    
     const { error, data } = await supabase.from("tasks").insert({
       title: newTaskTitle, description: newTaskDesc, reward: parseFloat(newTaskReward) || 0,
       category_id: newTaskCategory, difficulty: newTaskDifficulty,
       link_url: newTaskLinkUrl,
+      image_url: imageUrl,
       requirements: newTaskRequirements ? newTaskRequirements.split("\n").filter(Boolean) : [],
       recommendations: newTaskRecommendations ? newTaskRecommendations.split("\n").filter(Boolean) : [],
       steps: newTaskSteps ? newTaskSteps.split("\n").filter(Boolean) : [],
@@ -278,7 +313,7 @@ const Admin = () => {
     if (error) { toast({ title: "Ошибка", description: error.message, variant: "destructive" }); return; }
     setTasks(prev => [data![0], ...prev]);
     setNewTaskTitle(""); setNewTaskDesc(""); setNewTaskReward(""); setNewTaskSteps(""); setNewTaskCriteria("");
-    setNewTaskLinkUrl(""); setNewTaskRequirements(""); setNewTaskRecommendations("");
+    setNewTaskLinkUrl(""); setNewTaskRequirements(""); setNewTaskRecommendations(""); setNewTaskImageFile(null);
     toast({ title: "Задание создано" });
   };
 
@@ -949,6 +984,14 @@ const Admin = () => {
                   </div>
                   <div className="md:col-span-2"><Label className="text-xs">Ссылка для выполнения</Label><Input value={newTaskLinkUrl} onChange={e => setNewTaskLinkUrl(e.target.value)} placeholder="https://example.com" /></div>
                 </div>
+                <div className="mb-4">
+                  <Label className="text-xs mb-2 block">Фото / логотип задания</Label>
+                  <label className="flex items-center gap-3 p-3 border-2 border-dashed border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                    <Image className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">{newTaskImageFile ? newTaskImageFile.name : "Нажмите для выбора изображения"}</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={e => setNewTaskImageFile(e.target.files?.[0] || null)} />
+                  </label>
+                </div>
                 <div className="space-y-4 mb-4">
                   <div><Label className="text-xs">Описание</Label><Textarea value={newTaskDesc} onChange={e => setNewTaskDesc(e.target.value)} rows={2} /></div>
                   <div><Label className="text-xs">Требования (каждое с новой строки)</Label><Textarea value={newTaskRequirements} onChange={e => setNewTaskRequirements(e.target.value)} rows={3} /></div>
@@ -1484,6 +1527,155 @@ const Admin = () => {
                   ))}
                   {securityLogs.length === 0 && <p className="text-sm text-muted-foreground">Нет событий</p>}
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== VERIFICATION ===== */}
+          {activeTab === "verification" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Верификация пользователей</h1>
+              <p className="text-sm text-muted-foreground mb-6">{verificationRequests.filter(v => v.status === "pending").length} заявок на рассмотрении</p>
+              <div className="space-y-4">
+                {verificationRequests.map((v: any) => (
+                  <div key={v.id} className="glass rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                          {(v.profiles?.full_name || "U")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium">{v.profiles?.full_name || v.profiles?.email || "—"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {v.document_type === "passport" ? "Паспорт РФ" : v.document_type === "foreign_passport" ? "Загранпаспорт" : "ВУ"} · Имя в документе: {v.full_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleString("ru-RU")}</div>
+                        </div>
+                      </div>
+                      <Badge className={`border-0 ${v.status === "approved" ? "bg-success/10 text-success" : v.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-amber-100 text-amber-700"}`}>
+                        {v.status === "approved" ? "Одобрено" : v.status === "rejected" ? "Отклонено" : "На рассмотрении"}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-3 mb-3">
+                      {v.document_url && (
+                        <a href={v.document_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+                          <Eye className="h-3.5 w-3.5" /> Документ
+                        </a>
+                      )}
+                      {v.selfie_url && (
+                        <a href={v.selfie_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-primary hover:underline">
+                          <Eye className="h-3.5 w-3.5" /> Селфи
+                        </a>
+                      )}
+                    </div>
+
+                    {v.status === "pending" && (
+                      <div className="flex gap-2">
+                        <Button size="sm" className="gradient-accent text-accent-foreground border-0" onClick={async () => {
+                          await supabase.from("verification_requests" as any).update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", v.id);
+                          await verifyUser(v.user_id, true);
+                          setVerificationRequests(prev => prev.map(r => r.id === v.id ? { ...r, status: "approved" } : r));
+                        }}>
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Одобрить
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30" onClick={async () => {
+                          await supabase.from("verification_requests" as any).update({ status: "rejected", reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", v.id);
+                          setVerificationRequests(prev => prev.map(r => r.id === v.id ? { ...r, status: "rejected" } : r));
+                          toast({ title: "Заявка отклонена" });
+                        }}>
+                          <XCircle className="h-3.5 w-3.5 mr-1" /> Отклонить
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {verificationRequests.length === 0 && <div className="text-center py-12 text-muted-foreground">Нет заявок на верификацию</div>}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== TEAM ===== */}
+          {activeTab === "team" && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Команда проекта</h1>
+              <p className="text-sm text-muted-foreground mb-6">{teamMembers.length} участников</p>
+
+              <div className="glass rounded-2xl p-6 mb-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Plus className="h-4 w-4" /> Добавить участника</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label className="text-xs">Пользователь</Label>
+                    <Select value={newTeamUserId} onValueChange={setNewTeamUserId}>
+                      <SelectTrigger><SelectValue placeholder="Выберите пользователя" /></SelectTrigger>
+                      <SelectContent>{users.map(u => <SelectItem key={u.user_id} value={u.user_id}>{u.full_name || u.email}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Должность</Label>
+                    <Input value={newTeamPosition} onChange={e => setNewTeamPosition(e.target.value)} placeholder="Например: Модератор" />
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <Label className="text-xs mb-2 block">Доступ к разделам</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {adminNav.filter(n => n.tab !== "overview").map(nav => (
+                      <button
+                        key={nav.tab}
+                        onClick={() => setNewTeamAccess(prev => prev.includes(nav.tab) ? prev.filter(t => t !== nav.tab) : [...prev, nav.tab])}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                          newTeamAccess.includes(nav.tab)
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+                        )}
+                      >
+                        {nav.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Button className="gradient-accent text-accent-foreground border-0" onClick={async () => {
+                  if (!newTeamUserId || !newTeamPosition) { toast({ title: "Заполните все поля", variant: "destructive" }); return; }
+                  const { data, error } = await supabase.from("team_members" as any).insert({
+                    user_id: newTeamUserId, position: newTeamPosition, access_tabs: newTeamAccess, created_by: user?.id,
+                  }).select();
+                  if (error) { toast({ title: "Ошибка", description: error.message, variant: "destructive" }); return; }
+                  const profileMap = new Map(users.map((p: any) => [p.user_id, p]));
+                  const newItem = data![0] as any;
+                  setTeamMembers(prev => [{ ...newItem, profiles: profileMap.get(newTeamUserId) || null }, ...prev]);
+                  setNewTeamUserId(""); setNewTeamPosition(""); setNewTeamAccess([]);
+                  toast({ title: "Участник добавлен" });
+                }}><Plus className="h-4 w-4 mr-2" /> Добавить</Button>
+              </div>
+
+              <div className="space-y-3">
+                {teamMembers.map((m: any) => (
+                  <div key={m.id} className="glass rounded-xl p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                          {(m.profiles?.full_name || "U")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium">{m.profiles?.full_name || m.profiles?.email || "—"}</div>
+                          <div className="text-sm text-primary font-medium">{m.position}</div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(m.access_tabs || []).map((tab: string) => (
+                              <span key={tab} className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{adminNav.find(n => n.tab === tab)?.label || tab}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={async () => {
+                        await supabase.from("team_members" as any).delete().eq("id", m.id);
+                        setTeamMembers(prev => prev.filter(t => t.id !== m.id));
+                        toast({ title: "Участник удалён" });
+                      }}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+                {teamMembers.length === 0 && <div className="text-center py-12 text-muted-foreground">Нет участников в команде</div>}
               </div>
             </motion.div>
           )}

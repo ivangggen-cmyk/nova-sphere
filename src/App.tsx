@@ -21,6 +21,8 @@ import Verification from "./pages/Verification";
 import Support from "./pages/Support";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,8 @@ const App = () => (
             <Route path="/dashboard/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
             <Route path="/dashboard/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
