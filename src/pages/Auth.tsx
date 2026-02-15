@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import AtlanticLogo from "@/components/AtlanticLogo";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -53,31 +54,52 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 gradient-hero noise" />
+      <div className="absolute inset-0 gradient-mesh opacity-20" />
+
+      {/* Orbs */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="absolute top-[20%] left-[15%] w-[400px] h-[400px] rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(168 60% 40% / 0.1), transparent 70%)" }}
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(195 80% 46% / 0.08), transparent 70%)" }}
+        animate={{ scale: [1, 1.15, 1] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-md mx-4 relative z-10"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold gradient-text mb-2">Atlantic</h1>
-          <p className="text-muted-foreground text-sm">
+          <div className="flex justify-center mb-5">
+            <AtlanticLogo size="lg" dark />
+          </div>
+          <p className="text-white/50 text-sm">
             {isLogin ? "Войдите в свой аккаунт" : "Создайте аккаунт"}
           </p>
         </div>
 
-        <div className="glass rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="glass-dark rounded-3xl p-8 shadow-2xl border border-white/5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div>
-                <Label className="text-xs mb-1.5 block">Полное имя</Label>
+                <Label className="text-xs mb-2 block text-white/60">Полное имя</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                   <Input
                     placeholder="Иван Петров"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="pl-10"
+                    className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl h-12 focus:border-primary/50 focus:ring-primary/20"
                     required={!isLogin}
                   />
                 </div>
@@ -85,37 +107,37 @@ const Auth = () => {
             )}
 
             <div>
-              <Label className="text-xs mb-1.5 block">Email</Label>
+              <Label className="text-xs mb-2 block text-white/60">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <Input
                   type="email"
                   placeholder="email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="pl-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl h-12 focus:border-primary/50 focus:ring-primary/20"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label className="text-xs mb-1.5 block">Пароль</Label>
+              <Label className="text-xs mb-2 block text-white/60">Пароль</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
+                  className="pl-11 pr-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl h-12 focus:border-primary/50 focus:ring-primary/20"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -124,19 +146,28 @@ const Auth = () => {
 
             <Button
               type="submit"
-              className="w-full gradient-accent text-accent-foreground border-0"
+              className="w-full gradient-accent text-accent-foreground border-0 h-12 rounded-xl font-semibold shadow-glow"
               size="lg"
               disabled={loading}
             >
-              {loading ? "Загрузка..." : isLogin ? "Войти" : "Зарегистрироваться"}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
+                  Загрузка...
+                </div>
+              ) : (
+                <>
+                  {isLogin ? "Войти" : "Зарегистрироваться"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-accent transition-colors"
+              className="text-sm text-white/40 hover:text-primary transition-colors duration-300"
             >
               {isLogin ? "Нет аккаунта? Зарегистрируйтесь" : "Уже есть аккаунт? Войдите"}
             </button>

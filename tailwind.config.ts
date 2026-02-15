@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        display: ["Space Grotesk", "Inter", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -50,6 +54,10 @@ export default {
         emerald: {
           DEFAULT: "hsl(var(--emerald))",
           light: "hsl(var(--emerald-light))",
+        },
+        cyan: {
+          DEFAULT: "hsl(var(--cyan))",
+          light: "hsl(var(--cyan-light))",
         },
         graphite: "hsl(var(--graphite))",
         "deep-blue": "hsl(var(--deep-blue))",
@@ -96,15 +104,34 @@ export default {
         },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-10px)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
+          "50%": { transform: "translateY(-8px) rotate(2deg)" },
         },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(160 55% 42% / 0.2)" },
-          "50%": { boxShadow: "0 0 40px hsl(160 55% 42% / 0.4)" },
+          "0%, 100%": { boxShadow: "0 0 20px hsl(168 60% 40% / 0.2)" },
+          "50%": { boxShadow: "0 0 50px hsl(168 60% 40% / 0.35)" },
+        },
+        "spin-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+        "gradient-shift": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        "wave": {
+          "0%": { transform: "translateX(0) translateY(0)" },
+          "25%": { transform: "translateX(5px) translateY(-5px)" },
+          "50%": { transform: "translateX(0) translateY(-10px)" },
+          "75%": { transform: "translateX(-5px) translateY(-5px)" },
+          "100%": { transform: "translateX(0) translateY(0)" },
         },
       },
       animation: {
@@ -115,8 +142,12 @@ export default {
         "scale-in": "scale-in 0.4s ease-out forwards",
         "slide-up": "slide-up 0.8s ease-out forwards",
         float: "float 6s ease-in-out infinite",
+        "float-slow": "float-slow 8s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
         "pulse-glow": "pulse-glow 3s ease-in-out infinite",
+        "spin-slow": "spin-slow 12s linear infinite",
+        "gradient-shift": "gradient-shift 4s ease infinite",
+        "wave": "wave 5s ease-in-out infinite",
       },
     },
   },
