@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         display: ["Space Grotesk", "Inter", "sans-serif"],
         sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -35,6 +36,10 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -51,16 +56,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        emerald: {
-          DEFAULT: "hsl(var(--emerald))",
-          light: "hsl(var(--emerald-light))",
+        violet: {
+          DEFAULT: "hsl(var(--violet))",
+          light: "hsl(var(--violet-light))",
         },
-        cyan: {
-          DEFAULT: "hsl(var(--cyan))",
-          light: "hsl(var(--cyan-light))",
+        amber: {
+          DEFAULT: "hsl(var(--amber))",
+          light: "hsl(var(--amber-light))",
         },
         graphite: "hsl(var(--graphite))",
-        "deep-blue": "hsl(var(--deep-blue))",
+        deep: "hsl(var(--deep))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -115,8 +120,8 @@ export default {
           "100%": { backgroundPosition: "200% 0" },
         },
         "pulse-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(168 60% 40% / 0.2)" },
-          "50%": { boxShadow: "0 0 50px hsl(168 60% 40% / 0.35)" },
+          "0%, 100%": { boxShadow: "0 0 20px hsl(252 85% 60% / 0.2)" },
+          "50%": { boxShadow: "0 0 50px hsl(252 85% 60% / 0.35)" },
         },
         "spin-slow": {
           "0%": { transform: "rotate(0deg)" },
@@ -125,13 +130,6 @@ export default {
         "gradient-shift": {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
-        },
-        "wave": {
-          "0%": { transform: "translateX(0) translateY(0)" },
-          "25%": { transform: "translateX(5px) translateY(-5px)" },
-          "50%": { transform: "translateX(0) translateY(-10px)" },
-          "75%": { transform: "translateX(-5px) translateY(-5px)" },
-          "100%": { transform: "translateX(0) translateY(0)" },
         },
       },
       animation: {
@@ -147,7 +145,6 @@ export default {
         "pulse-glow": "pulse-glow 3s ease-in-out infinite",
         "spin-slow": "spin-slow 12s linear infinite",
         "gradient-shift": "gradient-shift 4s ease infinite",
-        "wave": "wave 5s ease-in-out infinite",
       },
     },
   },
