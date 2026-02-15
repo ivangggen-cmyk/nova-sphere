@@ -2,8 +2,45 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, TrendingUp, Shield, Zap, Users, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Hero = () => {
+  const [stats, setStats] = useState({ totalPaid: 0, usersCount: 0, tasksCount: 0, approvedRate: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [profilesR, tasksR, paymentsR, reportsR] = await Promise.all([
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("tasks").select("id", { count: "exact", head: true }),
+        supabase.from("payments").select("amount").in("status", ["approved", "completed"]),
+        supabase.from("reports").select("status"),
+      ]);
+      const totalPaid = (paymentsR.data || []).reduce((s, p) => s + Number(p.amount), 0);
+      const allReports = reportsR.data || [];
+      const approved = allReports.filter(r => r.status === "approved").length;
+      const rate = allReports.length > 0 ? Math.round((approved / allReports.length) * 100) : 0;
+      setStats({
+        totalPaid,
+        usersCount: profilesR.count || 0,
+        tasksCount: tasksR.count || 0,
+        approvedRate: rate,
+      });
+    };
+    fetchStats();
+  }, []);
+
+  const formatAmount = (n: number) => {
+    if (n >= 1_000_000) return `₽${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `₽${(n / 1_000).toFixed(0)}K`;
+    return `₽${n}`;
+  };
+
+  const formatCount = (n: number) => {
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K+`;
+    return String(n);
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
       {/* Background decorations */}
@@ -105,7 +142,7 @@ const Hero = () => {
             </a>
           </motion.div>
 
-          {/* Stats */}
+          {/* Stats - Real data */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -113,10 +150,10 @@ const Hero = () => {
             className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto"
           >
             {[
-              { icon: TrendingUp, label: "Выплачено", value: "₽48M+" },
-              { icon: Users, label: "Исполнителей", value: "12K+" },
-              { icon: Zap, label: "Заданий", value: "5K+" },
-              { icon: CheckCircle, label: "Одобрено", value: "98%" },
+              { icon: TrendingUp, label: "Выплачено", value: formatAmount(stats.totalPaid) },
+              { icon: Users, label: "Исполнителей", value: formatCount(stats.usersCount) },
+              { icon: Zap, label: "Заданий", value: formatCount(stats.tasksCount) },
+              { icon: CheckCircle, label: "Одобрено", value: `${stats.approvedRate}%` },
             ].map((stat) => (
               <motion.div
                 key={stat.label}

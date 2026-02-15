@@ -368,6 +368,7 @@ export type Database = {
           description: string
           difficulty: string
           id: string
+          image_url: string | null
           link_url: string | null
           materials: string[] | null
           recommendations: string[] | null
@@ -389,6 +390,7 @@ export type Database = {
           description?: string
           difficulty?: string
           id?: string
+          image_url?: string | null
           link_url?: string | null
           materials?: string[] | null
           recommendations?: string[] | null
@@ -410,6 +412,7 @@ export type Database = {
           description?: string
           difficulty?: string
           id?: string
+          image_url?: string | null
           link_url?: string | null
           materials?: string[] | null
           recommendations?: string[] | null
@@ -431,6 +434,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_members: {
+        Row: {
+          access_tabs: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          position: string
+          user_id: string
+        }
+        Insert: {
+          access_tabs?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          position?: string
+          user_id: string
+        }
+        Update: {
+          access_tabs?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          position?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_requisites: {
         Row: {
@@ -514,6 +544,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      verification_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          document_type: string
+          document_url: string | null
+          full_name: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          document_type?: string
+          document_url?: string | null
+          full_name?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          document_type?: string
+          document_url?: string | null
+          full_name?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

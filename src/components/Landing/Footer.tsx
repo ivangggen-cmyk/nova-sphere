@@ -31,8 +31,8 @@ const Footer = () => (
         <div>
           <h4 className="font-display font-semibold text-foreground mb-4 text-sm tracking-wide">Документы</h4>
           <div className="space-y-3 text-sm text-muted-foreground">
-            <span className="block hover:text-foreground cursor-pointer transition-colors duration-300">Политика конфиденциальности</span>
-            <span className="block hover:text-foreground cursor-pointer transition-colors duration-300">Пользовательское соглашение</span>
+            <Link to="/privacy" className="block hover:text-foreground transition-colors duration-300">Политика конфиденциальности</Link>
+            <Link to="/terms" className="block hover:text-foreground transition-colors duration-300">Пользовательское соглашение</Link>
           </div>
         </div>
       </div>
