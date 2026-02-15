@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ClipboardList, Plus, Archive, Send, CreditCard,
@@ -49,6 +49,18 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [moreOpen]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -90,7 +102,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             ))}
 
             {/* More dropdown */}
-            <div className="relative">
+            <div className="relative" ref={moreRef}>
               <button
                 onClick={() => setMoreOpen(!moreOpen)}
                 className={cn(
@@ -103,9 +115,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               </button>
 
               <AnimatePresence>
-                {moreOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+              {moreOpen && (
                     <motion.div
                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -143,7 +153,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                         </>
                       )}
                     </motion.div>
-                  </>
                 )}
               </AnimatePresence>
             </div>
