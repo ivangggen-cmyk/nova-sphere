@@ -13,12 +13,32 @@ const Referrals = () => {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const [referrals, setReferrals] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("referrals").select("*, profiles!referrals_referred_id_fkey(full_name, created_at)")
-      .eq("referrer_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => setReferrals(data || []));
+    const fetchData = async () => {
+      const { data: refsData } = await supabase
+        .from("referrals")
+        .select("*")
+        .eq("referrer_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const refs = refsData || [];
+      setReferrals(refs);
+
+      // Fetch referred profiles
+      const referredIds = refs.map(r => r.referred_id);
+      if (referredIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, created_at")
+          .in("user_id", referredIds);
+        const map = new Map((profilesData || []).map(p => [p.user_id, p]));
+        setProfiles(map);
+      }
+    };
+    fetchData();
   }, [user]);
 
   const link = `${window.location.origin}/auth?ref=${profile?.referral_code || ""}`;
@@ -56,22 +76,25 @@ const Referrals = () => {
           <p className="text-muted-foreground text-sm">Пока никого не пригласили</p>
         ) : (
           <div className="space-y-3">
-            {referrals.map((r, i) => (
-              <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-                    {(r.profiles?.full_name || "?")[0]}
+            {referrals.map((r) => {
+              const refProfile = profiles.get(r.referred_id);
+              return (
+                <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                      {(refProfile?.full_name || "?")[0]}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{refProfile?.full_name || "Пользователь"}</div>
+                      <div className="text-xs text-muted-foreground">Уровень {r.level}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm font-medium">{r.profiles?.full_name || "Пользователь"}</div>
-                    <div className="text-xs text-muted-foreground">Уровень {r.level}</div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold">{Number(r.bonus_amount).toLocaleString("ru-RU")} ₽</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold">{Number(r.bonus_amount).toLocaleString("ru-RU")} ₽</div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </motion.div>
