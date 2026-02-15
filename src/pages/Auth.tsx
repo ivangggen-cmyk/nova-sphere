@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, ArrowLeft, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +14,20 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      setReferralCode(ref);
+      setIsLogin(false);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,11 +40,37 @@ const Auth = () => {
         toast({ title: "Добро пожаловать!" });
         navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: { emailRedirectTo: window.location.origin, data: { full_name: fullName } },
         });
         if (error) throw error;
+
+        // If referral code provided, link the referral
+        if (referralCode && data.user) {
+          try {
+            const { data: referrer } = await supabase
+              .from("profiles")
+              .select("user_id")
+              .eq("referral_code", referralCode)
+              .maybeSingle();
+
+            if (referrer && referrer.user_id !== data.user.id) {
+              await supabase.from("referrals").insert({
+                referrer_id: referrer.user_id,
+                referred_id: data.user.id,
+                level: 1,
+              });
+              // Update profile with referred_by
+              await supabase.from("profiles")
+                .update({ referred_by: referrer.user_id })
+                .eq("user_id", data.user.id);
+            }
+          } catch (refErr) {
+            console.error("Referral linking error:", refErr);
+          }
+        }
+
         toast({ title: "Регистрация успешна!", description: "Добро пожаловать в Atlantic!" });
         navigate("/dashboard");
       }
@@ -139,6 +175,21 @@ const Auth = () => {
                 </button>
               </div>
             </div>
+
+            {!isLogin && (
+              <div>
+                <Label className="text-xs mb-2 block text-muted-foreground">Реферальный код (необязательно)</Label>
+                <div className="relative">
+                  <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="ATL..."
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    className="pl-11 rounded-xl h-12"
+                  />
+                </div>
+              </div>
+            )}
 
             <Button
               type="submit"
