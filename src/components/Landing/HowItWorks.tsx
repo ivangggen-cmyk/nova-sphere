@@ -6,56 +6,82 @@ const steps = [
     icon: UserPlus,
     title: "Регистрация",
     desc: "Создайте аккаунт за 2 минуты. Только email и базовая информация.",
+    color: "from-primary/20 to-primary/5",
   },
   {
     icon: Search,
     title: "Выберите задание",
-    desc: "Просмотрите доступные задания, отфильтруйте по категории и уровню.",
+    desc: "Просмотрите каталог заданий, фильтруйте по категориям и награде.",
+    color: "from-accent/20 to-accent/5",
   },
   {
     icon: CheckCircle2,
-    title: "Выполните и отправьте",
+    title: "Выполните",
     desc: "Следуйте инструкции, прикрепите результат и отправьте на проверку.",
+    color: "from-primary/20 to-accent/5",
   },
   {
     icon: Wallet,
     title: "Получите оплату",
-    desc: "После одобрения средства зачисляются на ваш баланс мгновенно.",
+    desc: "После одобрения средства мгновенно зачисляются на ваш баланс.",
+    color: "from-accent/20 to-primary/5",
   },
 ];
 
 const HowItWorks = () => (
-  <section id="how" className="py-24 bg-background">
-    <div className="container mx-auto px-4">
+  <section id="how" className="py-28 bg-background relative overflow-hidden">
+    <div className="absolute inset-0 gradient-mesh opacity-50" />
+    <div className="container mx-auto px-4 relative">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-center mb-16"
+        className="text-center mb-20"
       >
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">Как это работает</h2>
-        <p className="text-muted-foreground max-w-md mx-auto">Четыре простых шага до первого заработка</p>
+        <span className="inline-block text-xs font-semibold text-primary tracking-wider uppercase mb-4 px-4 py-1.5 rounded-full bg-primary/10">
+          Как это работает
+        </span>
+        <h2 className="text-3xl md:text-5xl font-display font-bold mb-5 text-balance">
+          Четыре шага до{" "}
+          <span className="gradient-text">первого заработка</span>
+        </h2>
+        <p className="text-muted-foreground max-w-lg mx-auto">
+          Простой и прозрачный процесс от регистрации до получения денег
+        </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-4 gap-8 max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
         {steps.map((step, i) => (
           <motion.div
             key={step.title}
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: i * 0.15 }}
-            className="relative text-center"
+            transition={{ delay: i * 0.12 }}
+            className="relative group"
           >
+            {/* Connector line */}
             {i < steps.length - 1 && (
-              <div className="hidden md:block absolute top-8 left-[60%] w-[80%] h-px bg-border" />
+              <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-px bg-gradient-to-r from-border to-transparent" />
             )}
-            <div className="relative z-10 w-16 h-16 mx-auto rounded-2xl gradient-accent flex items-center justify-center mb-4 shadow-glass">
-              <step.icon className="h-7 w-7 text-accent-foreground" />
+
+            <div className="relative text-center">
+              {/* Step number */}
+              <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full gradient-accent flex items-center justify-center text-xs font-bold text-accent-foreground z-10">
+                {i + 1}
+              </div>
+
+              {/* Icon */}
+              <motion.div
+                whileHover={{ scale: 1.08, rotate: 3 }}
+                className={`w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-5 shadow-glass group-hover:shadow-glow transition-shadow duration-500`}
+              >
+                <step.icon className="h-9 w-9 text-primary" />
+              </motion.div>
+
+              <h3 className="font-display font-semibold text-lg mb-2">{step.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
             </div>
-            <div className="text-xs font-semibold text-accent mb-2">Шаг {i + 1}</div>
-            <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
-            <p className="text-sm text-muted-foreground">{step.desc}</p>
           </motion.div>
         ))}
       </div>
