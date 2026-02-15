@@ -36,22 +36,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch profile
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", session.user.id)
-            .single();
-          setProfile(profileData);
-
-          // Check admin role
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .eq("role", "admin")
-            .maybeSingle();
-          setIsAdmin(!!roleData);
+          try {
+            const [profileRes, roleRes] = await Promise.all([
+              supabase.from("profiles").select("*").eq("user_id", session.user.id).maybeSingle(),
+              supabase.from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle(),
+            ]);
+            setProfile(profileRes.data);
+            setIsAdmin(!!roleRes.data);
+          } catch (e) {
+            console.error("Auth data fetch error:", e);
+          }
         } else {
           setProfile(null);
           setIsAdmin(false);
