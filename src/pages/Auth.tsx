@@ -47,8 +47,8 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 gradient-hero noise" />
-      <div className="absolute inset-0 gradient-mesh opacity-20" />
+      <div className="absolute inset-0 bg-[hsl(240_20%_6%)]" />
+      <div className="absolute inset-0 gradient-mesh opacity-10" />
 
       <motion.div
         className="absolute top-[20%] left-[15%] w-[400px] h-[400px] rounded-full"
@@ -73,7 +73,7 @@ const Auth = () => {
           <div className="flex justify-center mb-5">
             <AtlanticLogo size="lg" dark />
           </div>
-          <p className="text-white/40 text-sm">
+          <p className="text-white/60 text-sm">
             {isLogin ? "Войдите в свой аккаунт" : "Создайте аккаунт"}
           </p>
         </div>
@@ -84,7 +84,7 @@ const Auth = () => {
               <div>
                 <Label className="text-xs mb-2 block text-white/50">Полное имя</Label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
                   <Input
                     placeholder="Иван Петров"
                     value={fullName}
@@ -99,7 +99,7 @@ const Auth = () => {
             <div>
               <Label className="text-xs mb-2 block text-white/50">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
                 <Input
                   type="email"
                   placeholder="email@example.com"
@@ -114,7 +114,7 @@ const Auth = () => {
             <div>
               <Label className="text-xs mb-2 block text-white/50">Пароль</Label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
