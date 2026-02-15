@@ -915,36 +915,38 @@ const Admin = () => {
                 {editingUser && (
                   <>
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={() => setEditingUser(null)} />
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg bg-card border border-border rounded-2xl shadow-elevated p-6">
-                      <h3 className="font-display font-semibold text-lg mb-4">Редактирование пользователя</h3>
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div><Label className="text-xs">Имя</Label><Input value={editUserName} onChange={e => setEditUserName(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Email</Label><Input value={editUserEmail} onChange={e => setEditUserEmail(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Телефон</Label><Input value={editUserPhone} onChange={e => setEditUserPhone(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Баланс (₽)</Label><Input type="number" value={editUserBalance} onChange={e => setEditUserBalance(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Рейтинг</Label><Input type="number" step="0.1" value={editUserRating} onChange={e => setEditUserRating(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Уровень</Label>
-                          <Select value={editUserLevel} onValueChange={setEditUserLevel}>
-                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Новичок">Новичок</SelectItem>
-                              <SelectItem value="Продвинутый">Продвинутый</SelectItem>
-                              <SelectItem value="Эксперт">Эксперт</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                        className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-elevated p-6 pointer-events-auto max-h-[90vh] overflow-y-auto">
+                        <h3 className="font-display font-semibold text-lg mb-4">Редактирование пользователя</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div><Label className="text-xs">Имя</Label><Input value={editUserName} onChange={e => setEditUserName(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Email</Label><Input value={editUserEmail} onChange={e => setEditUserEmail(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Телефон</Label><Input value={editUserPhone} onChange={e => setEditUserPhone(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Баланс (₽)</Label><Input type="number" value={editUserBalance} onChange={e => setEditUserBalance(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Рейтинг</Label><Input type="number" step="0.1" value={editUserRating} onChange={e => setEditUserRating(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Уровень</Label>
+                            <Select value={editUserLevel} onValueChange={setEditUserLevel}>
+                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Новичок">Новичок</SelectItem>
+                                <SelectItem value="Продвинутый">Продвинутый</SelectItem>
+                                <SelectItem value="Эксперт">Эксперт</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <Badge variant={editingUser.is_verified ? "default" : "outline"} className="text-xs">{editingUser.is_verified ? "Верифицирован" : "Не верифицирован"}</Badge>
-                        <Badge variant={editingUser.is_blocked ? "destructive" : "outline"} className="text-xs">{editingUser.is_blocked ? "Заблокирован" : "Активен"}</Badge>
-                        <span className="text-xs text-muted-foreground ml-auto">ID: {editingUser.user_id?.slice(0, 8)}...</span>
-                      </div>
-                      <div className="flex gap-3">
-                        <Button className="gradient-primary text-primary-foreground border-0 rounded-xl" onClick={saveEditUser}>Сохранить</Button>
-                        <Button variant="outline" className="rounded-xl" onClick={() => setEditingUser(null)}>Отмена</Button>
-                      </div>
-                    </motion.div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <Badge variant={editingUser.is_verified ? "default" : "outline"} className="text-xs">{editingUser.is_verified ? "Верифицирован" : "Не верифицирован"}</Badge>
+                          <Badge variant={editingUser.is_blocked ? "destructive" : "outline"} className="text-xs">{editingUser.is_blocked ? "Заблокирован" : "Активен"}</Badge>
+                          <span className="text-xs text-muted-foreground ml-auto">ID: {editingUser.user_id?.slice(0, 8)}...</span>
+                        </div>
+                        <div className="flex gap-3">
+                          <Button className="gradient-primary text-primary-foreground border-0 rounded-xl" onClick={saveEditUser}>Сохранить</Button>
+                          <Button variant="outline" className="rounded-xl" onClick={() => setEditingUser(null)}>Отмена</Button>
+                        </div>
+                      </motion.div>
+                    </div>
                   </>
                 )}
               </AnimatePresence>
@@ -1039,52 +1041,54 @@ const Admin = () => {
                 {editingTask && (
                   <>
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={() => setEditingTask(null)} />
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl bg-card border border-border rounded-2xl shadow-elevated p-6 max-h-[85vh] overflow-y-auto">
-                      <h3 className="font-display font-semibold text-lg mb-4">Редактирование задания</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div><Label className="text-xs">Название</Label><Input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Категория</Label>
-                          <Select value={editTaskCategory} onValueChange={setEditTaskCategory}>
-                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                          </Select>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                        className="w-full max-w-2xl bg-card border border-border rounded-2xl shadow-elevated p-6 max-h-[85vh] overflow-y-auto pointer-events-auto">
+                        <h3 className="font-display font-semibold text-lg mb-4">Редактирование задания</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div><Label className="text-xs">Название</Label><Input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Категория</Label>
+                            <Select value={editTaskCategory} onValueChange={setEditTaskCategory}>
+                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </div>
+                          <div><Label className="text-xs">Награда (₽)</Label><Input type="number" value={editTaskReward} onChange={e => setEditTaskReward(e.target.value)} className="mt-1" /></div>
+                          <div><Label className="text-xs">Сложность</Label>
+                            <Select value={editTaskDifficulty} onValueChange={setEditTaskDifficulty}>
+                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Легко">Легко</SelectItem>
+                                <SelectItem value="Средне">Средне</SelectItem>
+                                <SelectItem value="Сложно">Сложно</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div><Label className="text-xs">Статус</Label>
+                            <Select value={editTaskStatus} onValueChange={setEditTaskStatus}>
+                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Активно</SelectItem>
+                                <SelectItem value="paused">Пауза</SelectItem>
+                                <SelectItem value="completed">Завершено</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div><Label className="text-xs">Ссылка для выполнения</Label><Input value={editTaskLinkUrl} onChange={e => setEditTaskLinkUrl(e.target.value)} className="mt-1" /></div>
                         </div>
-                        <div><Label className="text-xs">Награда (₽)</Label><Input type="number" value={editTaskReward} onChange={e => setEditTaskReward(e.target.value)} className="mt-1" /></div>
-                        <div><Label className="text-xs">Сложность</Label>
-                          <Select value={editTaskDifficulty} onValueChange={setEditTaskDifficulty}>
-                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Легко">Легко</SelectItem>
-                              <SelectItem value="Средне">Средне</SelectItem>
-                              <SelectItem value="Сложно">Сложно</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="space-y-4 mb-4">
+                          <div><Label className="text-xs">Описание</Label><Textarea value={editTaskDesc} onChange={e => setEditTaskDesc(e.target.value)} rows={2} className="mt-1" /></div>
+                          <div><Label className="text-xs">Требования (каждое с новой строки)</Label><Textarea value={editTaskRequirements} onChange={e => setEditTaskRequirements(e.target.value)} rows={3} className="mt-1" /></div>
+                          <div><Label className="text-xs">Рекомендации (каждая с новой строки)</Label><Textarea value={editTaskRecommendations} onChange={e => setEditTaskRecommendations(e.target.value)} rows={2} className="mt-1" /></div>
+                          <div><Label className="text-xs">Шаги</Label><Textarea value={editTaskSteps} onChange={e => setEditTaskSteps(e.target.value)} rows={3} className="mt-1" /></div>
+                          <div><Label className="text-xs">Критерии проверки</Label><Textarea value={editTaskCriteria} onChange={e => setEditTaskCriteria(e.target.value)} rows={2} className="mt-1" /></div>
                         </div>
-                        <div><Label className="text-xs">Статус</Label>
-                          <Select value={editTaskStatus} onValueChange={setEditTaskStatus}>
-                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="active">Активно</SelectItem>
-                              <SelectItem value="paused">Пауза</SelectItem>
-                              <SelectItem value="completed">Завершено</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="flex gap-3">
+                          <Button className="gradient-primary text-primary-foreground border-0 rounded-xl" onClick={saveEditTask}>Сохранить</Button>
+                          <Button variant="outline" className="rounded-xl" onClick={() => setEditingTask(null)}>Отмена</Button>
                         </div>
-                        <div><Label className="text-xs">Ссылка для выполнения</Label><Input value={editTaskLinkUrl} onChange={e => setEditTaskLinkUrl(e.target.value)} className="mt-1" /></div>
-                      </div>
-                      <div className="space-y-4 mb-4">
-                        <div><Label className="text-xs">Описание</Label><Textarea value={editTaskDesc} onChange={e => setEditTaskDesc(e.target.value)} rows={2} className="mt-1" /></div>
-                        <div><Label className="text-xs">Требования (каждое с новой строки)</Label><Textarea value={editTaskRequirements} onChange={e => setEditTaskRequirements(e.target.value)} rows={3} className="mt-1" /></div>
-                        <div><Label className="text-xs">Рекомендации (каждая с новой строки)</Label><Textarea value={editTaskRecommendations} onChange={e => setEditTaskRecommendations(e.target.value)} rows={2} className="mt-1" /></div>
-                        <div><Label className="text-xs">Шаги</Label><Textarea value={editTaskSteps} onChange={e => setEditTaskSteps(e.target.value)} rows={3} className="mt-1" /></div>
-                        <div><Label className="text-xs">Критерии проверки</Label><Textarea value={editTaskCriteria} onChange={e => setEditTaskCriteria(e.target.value)} rows={2} className="mt-1" /></div>
-                      </div>
-                      <div className="flex gap-3">
-                        <Button className="gradient-primary text-primary-foreground border-0 rounded-xl" onClick={saveEditTask}>Сохранить</Button>
-                        <Button variant="outline" className="rounded-xl" onClick={() => setEditingTask(null)}>Отмена</Button>
-                      </div>
-                    </motion.div>
+                      </motion.div>
+                    </div>
                   </>
                 )}
               </AnimatePresence>

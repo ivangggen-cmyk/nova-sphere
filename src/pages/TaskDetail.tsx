@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, FileText, CheckCircle2, AlertCircle, Briefcase, ExternalLink, ListChecks, Lightbulb, X } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle2, AlertCircle, Briefcase, ExternalLink, ListChecks, Lightbulb, X, Copy } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -161,31 +161,41 @@ const TaskDetail = () => {
         {showConfirmModal && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={() => setShowConfirmModal(false)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md bg-card border border-border rounded-2xl shadow-elevated p-6">
-              <button onClick={() => setShowConfirmModal(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-              <h3 className="font-display font-semibold text-lg mb-2">Принять задание?</h3>
-              <p className="text-sm text-muted-foreground mb-4">{task.title}</p>
-              
-              {task.link_url && (
-                <a href={task.link_url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20 text-primary hover:bg-primary/10 transition-colors mb-4">
-                  <ExternalLink className="h-4 w-4 shrink-0" />
-                  <span className="text-sm font-medium truncate">Ссылка для выполнения</span>
-                </a>
-              )}
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-md bg-card border border-border rounded-2xl shadow-elevated p-6 pointer-events-auto">
+                <button onClick={() => setShowConfirmModal(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+                <h3 className="font-display font-semibold text-lg mb-2">Принять задание?</h3>
+                <p className="text-sm text-muted-foreground mb-4">{task.title}</p>
+                
+                {task.link_url && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <a href={task.link_url} target="_blank" rel="noopener noreferrer"
+                      className="flex-1 flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20 text-primary hover:bg-primary/10 transition-colors min-w-0">
+                      <ExternalLink className="h-4 w-4 shrink-0" />
+                      <span className="text-sm font-medium truncate">{task.link_url}</span>
+                    </a>
+                    <Button variant="outline" size="sm" className="shrink-0 rounded-xl h-[46px] w-[46px] p-0" onClick={() => {
+                      navigator.clipboard.writeText(task.link_url);
+                      toast({ title: "Ссылка скопирована!" });
+                    }}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
 
-              <div className="flex gap-3">
-                <Button className="flex-1 gradient-primary text-primary-foreground border-0 rounded-xl" onClick={confirmTakeTask} disabled={taking}>
-                  <CheckCircle2 className="mr-2 h-4 w-4" /> Принять в работу
-                </Button>
-                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowConfirmModal(false)}>
-                  Отклонить
-                </Button>
-              </div>
-            </motion.div>
+                <div className="flex gap-3">
+                  <Button className="flex-1 gradient-primary text-primary-foreground border-0 rounded-xl" onClick={confirmTakeTask} disabled={taking}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" /> Принять в работу
+                  </Button>
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowConfirmModal(false)}>
+                    Отклонить
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
