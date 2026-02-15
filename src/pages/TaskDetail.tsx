@@ -63,17 +63,24 @@ const TaskDetail = () => {
       </Link>
       <div className="grid lg:grid-cols-3 gap-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 space-y-4">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <Badge variant="outline" className="mb-2">{task.task_categories?.name}</Badge>
-                <h1 className="text-xl font-display font-bold mb-1">{task.title}</h1>
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            {task.image_url && (
+              <div className="w-full h-40 bg-muted">
+                <img src={task.image_url} alt={task.title} className="w-full h-full object-cover" />
               </div>
-              <span className="px-3 py-1.5 rounded-xl text-xs font-medium bg-success/10 text-success">Доступно</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-center py-4">
-              <div><div className="text-lg font-mono font-bold">{Number(task.reward).toLocaleString("ru-RU")} ₽</div><div className="text-xs text-muted-foreground">Вознаграждение</div></div>
-              <div><div className={`text-sm font-medium px-3 py-1 rounded-lg inline-block ${difficultyColors[task.difficulty] || ""}`}>{task.difficulty}</div><div className="text-xs text-muted-foreground mt-1">Сложность</div></div>
+            )}
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <Badge variant="outline" className="mb-2">{task.task_categories?.name}</Badge>
+                  <h1 className="text-xl font-display font-bold mb-1">{task.title}</h1>
+                </div>
+                <span className="px-3 py-1.5 rounded-xl text-xs font-medium bg-success/10 text-success shrink-0">Доступно</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-center py-4">
+                <div><div className="text-lg font-mono font-bold">{Number(task.reward).toLocaleString("ru-RU")} ₽</div><div className="text-xs text-muted-foreground">Вознаграждение</div></div>
+                <div><div className={`text-sm font-medium px-3 py-1 rounded-lg inline-block ${difficultyColors[task.difficulty] || ""}`}>{task.difficulty}</div><div className="text-xs text-muted-foreground mt-1">Сложность</div></div>
+              </div>
             </div>
           </div>
 
