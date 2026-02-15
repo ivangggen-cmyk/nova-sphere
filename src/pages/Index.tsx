@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 
 const CTABanner = () => (
   <section className="py-28 bg-background relative overflow-hidden">
-    <div className="absolute inset-0 gradient-mesh opacity-50" />
+    <div className="absolute inset-0 gradient-mesh opacity-40" />
     <div className="container mx-auto px-4 relative">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -28,7 +28,7 @@ const CTABanner = () => (
           Присоединяйтесь к 12 000+ исполнителей и получите доступ к тысячам оплачиваемых заданий уже сегодня
         </p>
         <Link to="/auth">
-          <Button size="lg" className="gradient-accent text-accent-foreground border-0 text-base px-10 h-14 rounded-2xl shadow-glow animate-pulse-glow font-semibold">
+          <Button size="lg" className="gradient-primary text-primary-foreground border-0 text-base px-10 h-14 rounded-2xl shadow-glow animate-pulse-glow font-semibold">
             Создать аккаунт бесплатно <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </Link>
@@ -38,7 +38,7 @@ const CTABanner = () => (
 );
 
 const Index = () => (
-  <div className="min-h-screen">
+  <div className="min-h-screen bg-background">
     <Navbar />
     <Hero />
     <Partners />
