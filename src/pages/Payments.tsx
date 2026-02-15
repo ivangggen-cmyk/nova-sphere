@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { CreditCard, ArrowDownRight, ArrowUpRight, Wallet, Settings2 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const methodLabels: Record<string, string> = {
+  card: "Карта",
+  sbp: "СБП",
+  crypto: "Crypto",
+  lolzteam: "LOLZTEAM",
+};
 
 const Payments = () => {
   const { user, profile } = useAuth();
@@ -15,35 +24,95 @@ const Payments = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState("");
   const [requesting, setRequesting] = useState(false);
+  const [requisites, setRequisites] = useState<any[]>([]);
+  const [editingRequisites, setEditingRequisites] = useState(false);
+  const [reqValues, setReqValues] = useState<Record<string, string>>({
+    card: "", sbp: "", crypto: "", lolzteam: "",
+  });
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => { setTransactions(data || []); setLoading(false); });
+    Promise.all([
+      supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("user_requisites").select("*").eq("user_id", user.id),
+    ]).then(([txRes, reqRes]) => {
+      setTransactions(txRes.data || []);
+      const reqs = reqRes.data || [];
+      setRequisites(reqs);
+      const vals: Record<string, string> = { card: "", sbp: "", crypto: "", lolzteam: "" };
+      reqs.forEach((r: any) => { vals[r.method] = r.details; });
+      setReqValues(vals);
+      setLoading(false);
+    });
   }, [user]);
 
   const handleWithdrawRequest = async () => {
-    if (!user || !withdrawAmount) return;
+    if (!user || !withdrawAmount || !withdrawMethod) {
+      toast({ title: "Укажите сумму и метод вывода", variant: "destructive" });
+      return;
+    }
     const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount <= 0) { toast({ title: "Некорректная сумма", variant: "destructive" }); return; }
     if (amount > (profile?.balance || 0)) { toast({ title: "Недостаточно средств", variant: "destructive" }); return; }
-    
+
+    const methodReq = requisites.find((r: any) => r.method === withdrawMethod);
+    if (!methodReq || !methodReq.details) {
+      toast({ title: "Сначала заполните реквизиты для этого метода", variant: "destructive" });
+      return;
+    }
+
     setRequesting(true);
     try {
+      // Deduct balance immediately
+      const newBalance = Number(profile?.balance || 0) - amount;
+      const { error: balError } = await supabase.from("profiles").update({ balance: newBalance }).eq("user_id", user.id);
+      if (balError) throw balError;
+
       const { error } = await supabase.from("payments").insert({
         user_id: user.id, amount, type: "withdrawal" as const, status: "pending" as const,
-        description: "Запрос на вывод средств"
+        description: `Вывод (${methodLabels[withdrawMethod]})`,
+        payment_method: withdrawMethod,
       });
       if (error) throw error;
-      toast({ title: "Запрос отправлен", description: "Ожидайте подтверждения администратора" });
+
+      // Log antifraud
+      await supabase.from("security_logs").insert({
+        user_id: user.id,
+        event: "withdrawal_request",
+        details: `Сумма: ${amount} ₽, Метод: ${methodLabels[withdrawMethod]}`,
+      });
+
+      toast({ title: "Запрос отправлен", description: "Средства заморожены до решения администратора" });
       setWithdrawAmount("");
-      // Refresh
+      setWithdrawMethod("");
       const { data } = await supabase.from("payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
       setTransactions(data || []);
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     } finally { setRequesting(false); }
+  };
+
+  const saveRequisites = async () => {
+    if (!user) return;
+    try {
+      for (const method of Object.keys(reqValues)) {
+        if (reqValues[method]) {
+          await supabase.from("user_requisites").upsert({
+            user_id: user.id,
+            method,
+            details: reqValues[method],
+          }, { onConflict: "user_id,method" });
+        }
+      }
+      const { data } = await supabase.from("user_requisites").select("*").eq("user_id", user.id);
+      setRequisites(data || []);
+      setEditingRequisites(false);
+      toast({ title: "Реквизиты сохранены" });
+    } catch (e: any) {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    }
   };
 
   const totalIn = transactions.filter(t => t.type !== "withdrawal").reduce((s, t) => s + Number(t.amount), 0);
@@ -52,8 +121,8 @@ const Payments = () => {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">История выплат</h1>
-        <p className="text-sm text-muted-foreground">Все транзакции вашего аккаунта</p>
+        <h1 className="text-2xl font-bold mb-1">Выплаты</h1>
+        <p className="text-sm text-muted-foreground">Управление выплатами и реквизитами</p>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4 mb-8">
@@ -72,16 +141,63 @@ const Payments = () => {
         ))}
       </div>
 
+      {/* Requisites */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center gap-2"><Wallet className="h-4 w-4" /> Мои реквизиты</h3>
+          <Button variant="outline" size="sm" onClick={() => setEditingRequisites(!editingRequisites)}>
+            <Settings2 className="h-4 w-4 mr-1" /> {editingRequisites ? "Отмена" : "Настроить"}
+          </Button>
+        </div>
+        {editingRequisites ? (
+          <div className="space-y-3">
+            {Object.entries(methodLabels).map(([key, label]) => (
+              <div key={key}>
+                <Label className="text-xs mb-1 block">{label}</Label>
+                <Input
+                  value={reqValues[key] || ""}
+                  onChange={e => setReqValues(prev => ({ ...prev, [key]: e.target.value }))}
+                  placeholder={key === "card" ? "Номер карты" : key === "sbp" ? "Номер телефона" : key === "crypto" ? "Адрес кошелька" : "Ник LOLZTEAM"}
+                />
+              </div>
+            ))}
+            <Button className="gradient-accent text-accent-foreground border-0" onClick={saveRequisites}>Сохранить</Button>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-3">
+            {Object.entries(methodLabels).map(([key, label]) => {
+              const req = requisites.find((r: any) => r.method === key);
+              return (
+                <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <span className="text-sm font-medium">{label}</span>
+                  <span className="text-sm text-muted-foreground">{req?.details || "Не указано"}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Withdraw */}
       <div className="glass rounded-2xl p-6 mb-6">
         <h3 className="font-semibold mb-3">Запросить вывод</h3>
-        <div className="flex gap-3">
-          <Input type="number" placeholder="Сумма вывода" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} className="max-w-xs" />
+        <div className="flex flex-wrap gap-3">
+          <Input type="number" placeholder="Сумма вывода" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} className="max-w-[180px]" />
+          <Select value={withdrawMethod} onValueChange={setWithdrawMethod}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Метод вывода" /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(methodLabels).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button className="gradient-accent text-accent-foreground border-0" onClick={handleWithdrawRequest} disabled={requesting}>
             {requesting ? "Отправка..." : "Запросить"}
           </Button>
         </div>
       </div>
 
+      {/* Transactions */}
       <div className="glass rounded-2xl p-6">
         <h3 className="font-semibold mb-4">Транзакции</h3>
         {loading ? <p className="text-muted-foreground">Загрузка...</p> : transactions.length === 0 ? <p className="text-muted-foreground text-sm">Нет транзакций</p> : (
@@ -95,7 +211,10 @@ const Payments = () => {
                   </div>
                   <div>
                     <div className="text-sm font-medium">{tx.description || (tx.type === "withdrawal" ? "Вывод" : tx.type === "reward" ? "Награда" : "Реф. бонус")}</div>
-                    <div className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleDateString("ru-RU")}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(tx.created_at).toLocaleDateString("ru-RU")}
+                      {tx.payment_method && ` · ${methodLabels[tx.payment_method] || tx.payment_method}`}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

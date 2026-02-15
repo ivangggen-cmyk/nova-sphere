@@ -36,6 +36,7 @@ const adminNav = [
   { label: "Баннеры", icon: Layers, tab: "banners" },
   { label: "Новости", icon: Globe, tab: "news" },
   { label: "Настройки", icon: Settings, tab: "settings" },
+  { label: "Реквизиты", icon: CreditCard, tab: "requisites" },
   { label: "Безопасность", icon: Shield, tab: "security" },
   { label: "Логи", icon: Activity, tab: "logs" },
 ];
@@ -57,7 +58,7 @@ const Admin = () => {
   const [banners, setBanners] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [allNotifications, setAllNotifications] = useState<any[]>([]);
-  
+  const [allRequisites, setAllRequisites] = useState<any[]>([]);
   // Search states
   const [searchUsers, setSearchUsers] = useState("");
   const [searchTasks, setSearchTasks] = useState("");
@@ -99,7 +100,7 @@ const Admin = () => {
   const [stats, setStats] = useState({ users: 0, activeTasks: 0, totalPaid: 0, pendingReports: 0 });
 
   const fetchAll = useCallback(async () => {
-    const [usersR, tasksR, catsR, txR, reportsR, refsR, settingsR, logsR, bannersR, newsR, notifsR] = await Promise.all([
+    const [usersR, tasksR, catsR, txR, reportsR, refsR, settingsR, logsR, bannersR, newsR, notifsR, reqsR] = await Promise.all([
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*, task_categories(name)").order("created_at", { ascending: false }),
       supabase.from("task_categories").select("*").order("name"),
@@ -111,6 +112,7 @@ const Admin = () => {
       supabase.from("banners").select("*").order("sort_order"),
       supabase.from("news").select("*").order("created_at", { ascending: false }),
       supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("user_requisites").select("*").order("created_at", { ascending: false }),
     ]);
 
     const profilesData = usersR.data || [];
@@ -138,7 +140,8 @@ const Admin = () => {
     setSecurityLogs(logsR.data || []);
     setBanners(bannersR.data || []);
     setNews(newsR.data || []);
-
+    // Enrich requisites with profile names
+    setAllRequisites(enriched(reqsR.data || []));
     const totalPaid = (txR.data || []).filter((t: any) => t.status === "completed" || t.status === "approved").reduce((s: number, t: any) => s + Number(t.amount), 0);
     const pendingReports = (reportsR.data || []).filter((r: any) => r.status === "pending").length;
     const activeTasks = (tasksR.data || []).filter((t: any) => t.status === "active").length;
@@ -174,6 +177,13 @@ const Admin = () => {
   const verifyUser = async (userId: string, verified: boolean) => {
     await supabase.from("profiles").update({ is_verified: verified }).eq("user_id", userId);
     setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, is_verified: verified } : u));
+    // Notify user
+    await supabase.from("notifications").insert({
+      user_id: userId, type: "success" as const,
+      title: verified ? "Аккаунт верифицирован!" : "Верификация отменена",
+      message: verified ? "Администратор подтвердил вашу личность. Вам доступны все задания." : "Верификация вашего аккаунта отменена.",
+    });
+    await logAction(verified ? "Пользователь верифицирован" : "Верификация отменена", userId);
     toast({ title: verified ? "Пользователь верифицирован" : "Верификация отменена" });
   };
 
@@ -248,12 +258,12 @@ const Admin = () => {
     await supabase.from("payments").update({ status: "approved" as const, completed_at: new Date().toISOString() }).eq("id", id);
     const tx = transactions.find(t => t.id === id);
     if (tx && tx.type === "withdrawal") {
+      // Balance already deducted on request, just update total_withdrawn
       const userProfile = users.find(u => u.user_id === tx.user_id);
       if (userProfile) {
-        const newBal = Number(userProfile.balance) - Number(tx.amount);
         const newWithdrawn = Number(userProfile.total_withdrawn) + Number(tx.amount);
-        await supabase.from("profiles").update({ balance: newBal, total_withdrawn: newWithdrawn }).eq("user_id", tx.user_id);
-        setUsers(prev => prev.map(u => u.user_id === tx.user_id ? { ...u, balance: newBal, total_withdrawn: newWithdrawn } : u));
+        await supabase.from("profiles").update({ total_withdrawn: newWithdrawn }).eq("user_id", tx.user_id);
+        setUsers(prev => prev.map(u => u.user_id === tx.user_id ? { ...u, total_withdrawn: newWithdrawn } : u));
       }
     }
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: "approved", completed_at: new Date().toISOString() } : t));
@@ -262,9 +272,27 @@ const Admin = () => {
   };
 
   const rejectPayment = async (id: string) => {
+    const tx = transactions.find(t => t.id === id);
     await supabase.from("payments").update({ status: "rejected" as const }).eq("id", id);
+    // Return balance to user on rejection
+    if (tx && tx.type === "withdrawal") {
+      const userProfile = users.find(u => u.user_id === tx.user_id);
+      if (userProfile) {
+        const newBal = Number(userProfile.balance) + Number(tx.amount);
+        await supabase.from("profiles").update({ balance: newBal }).eq("user_id", tx.user_id);
+        setUsers(prev => prev.map(u => u.user_id === tx.user_id ? { ...u, balance: newBal } : u));
+      }
+      // Notify user
+      if (tx.user_id) {
+        await supabase.from("notifications").insert({
+          user_id: tx.user_id, type: "warning" as const,
+          title: "Вывод отклонён", message: "Ваш запрос на вывод средств отклонён. Средства возвращены на баланс."
+        });
+      }
+      await logAction("Вывод отклонён, средства возвращены", id);
+    }
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, status: "rejected" } : t));
-    toast({ title: "Выплата отклонена" });
+    toast({ title: "Выплата отклонена, средства возвращены" });
   };
 
   const createPayment = async (userId: string, amount: number, type: string, desc: string) => {
@@ -1013,7 +1041,46 @@ const Admin = () => {
             </div>
           )}
 
-          {/* ===== SECURITY ===== */}
+          {/* ===== REQUISITES ===== */}
+          {activeTab === "requisites" && (
+            <div>
+              <h1 className="text-2xl font-bold mb-1">Реквизиты пользователей</h1>
+              <p className="text-sm text-muted-foreground mb-6">Просмотр настроенных реквизитов</p>
+              <div className="glass rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left p-4 font-medium text-muted-foreground">Пользователь</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Метод</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Реквизиты</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Дата</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allRequisites.map((r: any) => (
+                        <tr key={r.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <td className="p-4 font-medium">{r.profiles?.full_name || r.profiles?.email || "—"}</td>
+                          <td className="p-4">
+                            <Badge variant="outline" className="text-xs">
+                              {r.method === "card" ? "Карта" : r.method === "sbp" ? "СБП" : r.method === "crypto" ? "Crypto" : "LOLZTEAM"}
+                            </Badge>
+                          </td>
+                          <td className="p-4 font-mono text-xs">{r.details}</td>
+                          <td className="p-4 text-muted-foreground">{new Date(r.created_at).toLocaleDateString("ru-RU")}</td>
+                        </tr>
+                      ))}
+                      {allRequisites.length === 0 && (
+                        <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Нет реквизитов</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+
           {activeTab === "security" && (
             <div>
               <h1 className="text-2xl font-bold mb-1">Безопасность</h1>

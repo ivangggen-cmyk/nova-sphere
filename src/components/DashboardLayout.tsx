@@ -15,7 +15,7 @@ const navItems = [
   { label: "Новые задания", icon: Plus, path: "/dashboard/new-tasks" },
   { label: "Архив", icon: Archive, path: "/dashboard/archive" },
   { label: "Отправить отчёт", icon: Send, path: "/dashboard/report" },
-  { label: "История выплат", icon: CreditCard, path: "/dashboard/payments" },
+  { label: "Выплаты", icon: CreditCard, path: "/dashboard/payments" },
   { label: "Статистика", icon: BarChart3, path: "/dashboard/stats" },
   { label: "Рефералы", icon: Users, path: "/dashboard/referrals" },
   { label: "Уведомления", icon: Bell, path: "/dashboard/notifications" },

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Send, FileImage, FileText, Mic, CheckCircle2, Clock, ChevronRight } from "lucide-react";
+import { Send, FileImage, FileText, Mic, CheckCircle2, ChevronRight, AlertTriangle } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ const Report = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [userTasks, setUserTasks] = useState<any[]>([]);
+  const [submittedTaskIds, setSubmittedTaskIds] = useState<Set<string>>(new Set());
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [format, setFormat] = useState<ReportFormat>("text");
   const [textReport, setTextReport] = useState("");
@@ -25,12 +26,25 @@ const Report = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       if (!user) return;
-      const { data } = await supabase
+      // Get user tasks in progress
+      const { data: tasks } = await supabase
         .from("user_tasks")
         .select("*, tasks(title, reward, deadline, task_categories(name))")
         .eq("user_id", user.id)
         .in("status", ["assigned", "in_progress"]);
-      setUserTasks(data || []);
+
+      // Get already submitted reports to prevent duplicates
+      const { data: existingReports } = await supabase
+        .from("reports")
+        .select("user_task_id")
+        .eq("user_id", user.id);
+
+      const submitted = new Set((existingReports || []).map((r: any) => r.user_task_id));
+      setSubmittedTaskIds(submitted);
+
+      // Filter out tasks that already have reports
+      const availableTasks = (tasks || []).filter((t: any) => !submitted.has(t.id));
+      setUserTasks(availableTasks);
       setLoading(false);
     };
     fetchTasks();
@@ -38,9 +52,22 @@ const Report = () => {
 
   const handleSubmit = async () => {
     if (!user || !selectedTask) return;
+
+    // Double-check: prevent duplicate report
+    const { data: existing } = await supabase
+      .from("reports")
+      .select("id")
+      .eq("user_task_id", selectedTask)
+      .eq("user_id", user.id)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      toast({ title: "Отчёт уже отправлен", description: "Повторная отправка невозможна", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // Create report
       const { error: reportError } = await supabase.from("reports").insert({
         user_task_id: selectedTask,
         user_id: user.id,
@@ -50,8 +77,14 @@ const Report = () => {
       });
       if (reportError) throw reportError;
 
-      // Update user_task status
       await supabase.from("user_tasks").update({ status: "submitted" }).eq("id", selectedTask);
+
+      // Antifraud log
+      await supabase.from("security_logs").insert({
+        user_id: user.id,
+        event: "report_submitted",
+        details: `Task: ${selectedTask}, Format: ${format}`,
+      });
 
       toast({ title: "Отчёт отправлен!", description: "Администратор проверит ваш отчёт и примет решение." });
       setSubmitted(true);
@@ -71,7 +104,7 @@ const Report = () => {
           </div>
           <h2 className="text-2xl font-bold mb-2">Отчёт отправлен на проверку</h2>
           <p className="text-muted-foreground mb-6 max-w-md">Администратор рассмотрит ваш отчёт и примет решение.</p>
-          <Button variant="outline" onClick={() => { setSubmitted(false); setSelectedTask(null); setTextReport(""); }}>Отправить ещё отчёт</Button>
+          <Button variant="outline" onClick={() => window.location.reload()}>Вернуться</Button>
         </motion.div>
       </DashboardLayout>
     );
@@ -82,13 +115,14 @@ const Report = () => {
       <DashboardLayout>
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-1">Отправить отчёт</h1>
-          <p className="text-sm text-muted-foreground">Выберите задание для отправки отчёта</p>
+          <p className="text-sm text-muted-foreground">Выберите задание для отправки отчёта (1 отчёт на задание)</p>
         </div>
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Загрузка...</div>
         ) : userTasks.length === 0 ? (
           <div className="glass rounded-2xl p-12 text-center">
-            <p className="text-muted-foreground">У вас нет заданий в работе. Возьмите задание из каталога.</p>
+            <AlertTriangle className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Нет заданий для отправки отчёта. Возьмите задание из каталога или отчёт уже отправлен.</p>
           </div>
         ) : (
           <div className="space-y-3">
