@@ -3,7 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import TaskDetail from "./pages/TaskDetail";
@@ -27,24 +30,27 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/tasks" element={<Tasks />} />
-          <Route path="/dashboard/tasks/:id" element={<TaskDetail />} />
-          <Route path="/dashboard/new-tasks" element={<Tasks />} />
-          <Route path="/dashboard/referrals" element={<Referrals />} />
-          <Route path="/dashboard/payments" element={<Payments />} />
-          <Route path="/dashboard/settings" element={<SettingsPage />} />
-          <Route path="/dashboard/archive" element={<Archive />} />
-          <Route path="/dashboard/report" element={<Report />} />
-          <Route path="/dashboard/stats" element={<Statistics />} />
-          <Route path="/dashboard/notifications" element={<Notifications />} />
-          <Route path="/dashboard/verification" element={<Verification />} />
-          <Route path="/dashboard/support" element={<Support />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/dashboard/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
+            <Route path="/dashboard/new-tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/dashboard/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+            <Route path="/dashboard/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+            <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/dashboard/archive" element={<ProtectedRoute><Archive /></ProtectedRoute>} />
+            <Route path="/dashboard/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+            <Route path="/dashboard/stats" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+            <Route path="/dashboard/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/dashboard/verification" element={<ProtectedRoute><Verification /></ProtectedRoute>} />
+            <Route path="/dashboard/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, ClipboardList, Plus, Archive, Send, CreditCard,
-  BarChart3, Users, Bell, Settings, ShieldCheck, HelpCircle, LogOut, ChevronLeft
+  BarChart3, Users, Bell, Settings, ShieldCheck, HelpCircle, LogOut, ChevronLeft, Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { label: "Дашборд", icon: LayoutDashboard, path: "/dashboard" },
@@ -23,6 +24,13 @@ const navItems = [
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
+  const { signOut, isAdmin, profile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -33,6 +41,20 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <span className="text-accent">Atlantic</span>
           </Link>
         </div>
+
+        {profile && (
+          <div className="p-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                {(profile.full_name || profile.email || "U")[0].toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{profile.full_name || "Пользователь"}</div>
+                <div className="text-xs text-sidebar-foreground/50 truncate">{profile.email}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
@@ -53,16 +75,31 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               </Link>
             );
           })}
+
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all mt-2 border border-accent/20",
+                pathname === "/admin"
+                  ? "bg-accent/10 text-accent font-medium"
+                  : "text-accent/70 hover:bg-accent/10 hover:text-accent"
+              )}
+            >
+              <Shield className="h-4 w-4 shrink-0" />
+              Админ-панель
+            </Link>
+          )}
         </nav>
 
         <div className="p-3 border-t border-sidebar-border">
-          <Link
-            to="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors w-full"
           >
             <LogOut className="h-4 w-4" />
             Выйти
-          </Link>
+          </button>
         </div>
       </aside>
 
