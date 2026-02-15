@@ -7,10 +7,10 @@ import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 
 const recentTasks = [
-  { id: 1, title: "Регистрация в сервисе FinApp", reward: "850 ₽", status: "accepted", date: "14 фев" },
-  { id: 2, title: "Обзор мобильного приложения", reward: "1 200 ₽", status: "review", date: "13 фев" },
-  { id: 3, title: "Тестирование платёжной формы", reward: "2 000 ₽", status: "in_progress", date: "12 фев" },
-  { id: 4, title: "Заполнение анкеты страхования", reward: "500 ₽", status: "available", date: "12 фев" },
+  { id: 1, title: "Открой ИП и получи вознаграждение", reward: "3 500 ₽", status: "accepted", date: "14 фев" },
+  { id: 2, title: "Найди курьера для Яндекс Еда", reward: "2 000 ₽", status: "review", date: "13 фев" },
+  { id: 3, title: "Оформи дебетовую карту Тинькофф", reward: "1 500 ₽", status: "in_progress", date: "12 фев" },
+  { id: 4, title: "Оформи полис ОСАГО онлайн", reward: "1 200 ₽", status: "available", date: "12 фев" },
 ];
 
 const statusMap: Record<string, { label: string; cls: string }> = {
@@ -28,12 +28,11 @@ const Dashboard = () => (
         animate={{ opacity: 1, x: 0 }}
         className="text-2xl md:text-3xl font-bold mb-1"
       >
-        Добро пожаловать, Алексей 👋
+        Добро пожаловать 👋
       </motion.h1>
       <p className="text-muted-foreground text-sm">Вот ваша сводка за сегодня</p>
     </div>
 
-    {/* Stats */}
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
       <StatCard icon={Wallet} label="Баланс" value="24 580 ₽" change="+12%" positive />
       <StatCard icon={ClipboardCheck} label="Выполнено заданий" value="47" change="+3 за неделю" positive />
@@ -41,7 +40,6 @@ const Dashboard = () => (
       <StatCard icon={Star} label="Рейтинг" value="4.8" change="Топ 5%" positive />
     </div>
 
-    {/* Progress */}
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -59,7 +57,6 @@ const Dashboard = () => (
     </motion.div>
 
     <div className="grid lg:grid-cols-3 gap-6">
-      {/* Recent Tasks */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -92,7 +89,6 @@ const Dashboard = () => (
         </div>
       </motion.div>
 
-      {/* Activity */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -102,7 +98,7 @@ const Dashboard = () => (
         <h3 className="font-semibold mb-5">Активность</h3>
         <div className="space-y-4">
           {[
-            { text: "Задание «Обзор FinApp» одобрено", time: "2 часа назад", icon: "✅" },
+            { text: "Отчёт по ИП одобрен", time: "2 часа назад", icon: "✅" },
             { text: "Новое задание доступно", time: "5 часов назад", icon: "📋" },
             { text: "Выплата 5 000 ₽ обработана", time: "Вчера", icon: "💰" },
             { text: "Реферал зарегистрировался", time: "2 дня назад", icon: "👤" },

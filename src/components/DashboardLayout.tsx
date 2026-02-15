@@ -26,12 +26,11 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
       <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border fixed inset-y-0 left-0 z-40">
         <div className="p-5 border-b border-sidebar-border">
           <Link to="/" className="flex items-center gap-2 text-lg font-bold">
             <ChevronLeft className="h-4 w-4 text-sidebar-foreground/50" />
-            <span className="text-accent">Work</span><span className="text-sidebar-foreground">Flow</span>
+            <span className="text-accent">Atlantic</span>
           </Link>
         </div>
 
@@ -67,14 +66,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
       </aside>
 
-      {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 glass z-40 flex items-center px-4 gap-3">
         <Link to="/" className="font-bold text-lg">
-          <span className="gradient-text">Work</span>Flow
+          <span className="gradient-text">Atlantic</span>
         </Link>
       </div>
 
-      {/* Main */}
       <main className="flex-1 lg:ml-64 pt-14 lg:pt-0">
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           {children}

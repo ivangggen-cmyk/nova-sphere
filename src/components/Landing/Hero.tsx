@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 const Hero = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-hero">
-      {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-accent/10 blur-3xl animate-float" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-accent/5 blur-3xl animate-float" style={{ animationDelay: "2s" }} />
@@ -32,9 +31,8 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.15 }}
             className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-primary-foreground mb-6 text-balance"
           >
-            Зарабатывай онлайн.{" "}
-            <span className="gradient-text">Прозрачно.</span>{" "}
-            Стабильно.
+            <span className="gradient-text">Atlantic</span> —{" "}
+            твой путь к заработку
           </motion.h1>
 
           <motion.p
@@ -43,7 +41,7 @@ const Hero = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-lg md:text-xl text-primary-foreground/60 max-w-2xl mx-auto mb-10"
           >
-            Выполняй задания от проверенных компаний, получай вознаграждение мгновенно и стройте карьеру в цифровой экономике
+            Выполняй задания от проверенных компаний, получай вознаграждение мгновенно и строй карьеру в цифровой экономике
           </motion.p>
 
           <motion.div
@@ -64,7 +62,6 @@ const Hero = () => {
             </a>
           </motion.div>
 
-          {/* Stats */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
