@@ -18,7 +18,7 @@ const faqs = [
 const FAQ = () => (
   <section id="faq" className="py-28 relative overflow-hidden">
     <div className="absolute inset-0 bg-muted/30" />
-    <div className="absolute inset-0 gradient-mesh opacity-30" />
+    <div className="absolute inset-0 gradient-mesh opacity-20" />
     <div className="container mx-auto px-4 max-w-3xl relative">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -44,7 +44,7 @@ const FAQ = () => (
             <AccordionItem
               key={i}
               value={`faq-${i}`}
-              className="glass rounded-2xl px-6 border-0 hover:shadow-elevated transition-shadow duration-500 data-[state=open]:shadow-elevated"
+              className="bg-card border border-border rounded-2xl px-6 hover:shadow-elevated transition-shadow duration-500 data-[state=open]:shadow-elevated"
             >
               <AccordionTrigger className="text-left font-display font-medium hover:no-underline py-5 text-base">
                 {faq.q}

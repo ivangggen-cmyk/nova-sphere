@@ -6,7 +6,7 @@ const partners = [
 
 const Partners = () => (
   <section className="py-20 bg-background relative overflow-hidden">
-    <div className="absolute inset-0 gradient-mesh opacity-30" />
+    <div className="absolute inset-0 gradient-mesh opacity-20" />
     <div className="container mx-auto px-4 relative">
       <motion.p
         initial={{ opacity: 0 }}
@@ -25,7 +25,7 @@ const Partners = () => (
             viewport={{ once: true }}
             transition={{ delay: i * 0.08 }}
             whileHover={{ scale: 1.1, y: -2 }}
-            className="text-xl md:text-2xl font-display font-bold text-muted-foreground/20 hover:text-primary/40 transition-all duration-500 cursor-default select-none"
+            className="text-xl md:text-2xl font-display font-bold text-muted-foreground/25 hover:text-primary/50 transition-all duration-500 cursor-default select-none"
           >
             {p}
           </motion.div>

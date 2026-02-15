@@ -6,31 +6,27 @@ const steps = [
     icon: UserPlus,
     title: "Регистрация",
     desc: "Создайте аккаунт за 2 минуты. Только email и базовая информация.",
-    color: "from-primary/20 to-primary/5",
   },
   {
     icon: Search,
     title: "Выберите задание",
     desc: "Просмотрите каталог заданий, фильтруйте по категориям и награде.",
-    color: "from-accent/20 to-accent/5",
   },
   {
     icon: CheckCircle2,
     title: "Выполните",
     desc: "Следуйте инструкции, прикрепите результат и отправьте на проверку.",
-    color: "from-primary/20 to-accent/5",
   },
   {
     icon: Wallet,
     title: "Получите оплату",
     desc: "После одобрения средства мгновенно зачисляются на ваш баланс.",
-    color: "from-accent/20 to-primary/5",
   },
 ];
 
 const HowItWorks = () => (
   <section id="how" className="py-28 bg-background relative overflow-hidden">
-    <div className="absolute inset-0 gradient-mesh opacity-50" />
+    <div className="absolute inset-0 gradient-mesh opacity-40" />
     <div className="container mx-auto px-4 relative">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -60,21 +56,18 @@ const HowItWorks = () => (
             transition={{ delay: i * 0.12 }}
             className="relative group"
           >
-            {/* Connector line */}
             {i < steps.length - 1 && (
               <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-px bg-gradient-to-r from-border to-transparent" />
             )}
 
             <div className="relative text-center">
-              {/* Step number */}
-              <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full gradient-accent flex items-center justify-center text-xs font-bold text-accent-foreground z-10">
+              <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full gradient-primary flex items-center justify-center text-xs font-bold text-primary-foreground z-10">
                 {i + 1}
               </div>
 
-              {/* Icon */}
               <motion.div
                 whileHover={{ scale: 1.08, rotate: 3 }}
-                className={`w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br ${step.color} flex items-center justify-center mb-5 shadow-glass group-hover:shadow-glow transition-shadow duration-500`}
+                className="w-20 h-20 mx-auto rounded-3xl bg-card border border-border flex items-center justify-center mb-5 shadow-glass group-hover:shadow-glow transition-shadow duration-500"
               >
                 <step.icon className="h-9 w-9 text-primary" />
               </motion.div>

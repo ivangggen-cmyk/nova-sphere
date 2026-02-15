@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,19 +46,20 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-[hsl(240_20%_6%)]" />
-      <div className="absolute inset-0 gradient-mesh opacity-10" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-background">
+      {/* Background */}
+      <div className="absolute inset-0 gradient-mesh opacity-50" />
+      <div className="absolute inset-0 noise" />
 
       <motion.div
-        className="absolute top-[20%] left-[15%] w-[400px] h-[400px] rounded-full"
-        style={{ background: "radial-gradient(circle, hsl(252 85% 60% / 0.1), transparent 70%)" }}
+        className="absolute top-[20%] left-[10%] w-[400px] h-[400px] rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(252 85% 60% / 0.06), transparent 70%)" }}
         animate={{ scale: [1, 1.2, 1] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
         className="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] rounded-full"
-        style={{ background: "radial-gradient(circle, hsl(38 95% 60% / 0.06), transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, hsl(38 95% 60% / 0.04), transparent 70%)" }}
         animate={{ scale: [1, 1.15, 1] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
       />
@@ -69,27 +70,32 @@ const Auth = () => {
         transition={{ duration: 0.6 }}
         className="w-full max-w-md mx-4 relative z-10"
       >
+        {/* Back */}
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
+          <ArrowLeft className="h-4 w-4" /> На главную
+        </Link>
+
         <div className="text-center mb-8">
           <div className="flex justify-center mb-5">
-            <AtlanticLogo size="lg" dark />
+            <AtlanticLogo size="lg" />
           </div>
-          <p className="text-white/60 text-sm">
+          <p className="text-muted-foreground text-sm">
             {isLogin ? "Войдите в свой аккаунт" : "Создайте аккаунт"}
           </p>
         </div>
 
-        <div className="glass-dark rounded-3xl p-8 shadow-2xl border border-white/5">
+        <div className="bg-card border border-border rounded-3xl p-8 shadow-elevated">
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <div>
-                <Label className="text-xs mb-2 block text-white/50">Полное имя</Label>
+                <Label className="text-xs mb-2 block text-muted-foreground">Полное имя</Label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Иван Петров"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="pl-11 bg-white/5 border-white/8 text-white placeholder:text-white/20 rounded-xl h-12 focus:border-primary/50 focus:ring-primary/20"
+                    className="pl-11 rounded-xl h-12"
                     required={!isLogin}
                   />
                 </div>
@@ -97,37 +103,37 @@ const Auth = () => {
             )}
 
             <div>
-              <Label className="text-xs mb-2 block text-white/50">Email</Label>
+              <Label className="text-xs mb-2 block text-muted-foreground">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="email"
                   placeholder="email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-11 bg-white/5 border-white/8 text-white placeholder:text-white/20 rounded-xl h-12 focus:border-primary/50 focus:ring-primary/20"
+                  className="pl-11 rounded-xl h-12"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <Label className="text-xs mb-2 block text-white/50">Пароль</Label>
+              <Label className="text-xs mb-2 block text-muted-foreground">Пароль</Label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-11 pr-11 bg-white/5 border-white/8 text-white placeholder:text-white/20 rounded-xl h-12 focus:border-primary/50 focus:ring-primary/20"
+                  className="pl-11 pr-11 rounded-xl h-12"
                   required
                   minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -157,7 +163,7 @@ const Auth = () => {
           <div className="mt-6 text-center">
             <button
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-white/35 hover:text-primary transition-colors duration-300"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
             >
               {isLogin ? "Нет аккаунта? Зарегистрируйтесь" : "Уже есть аккаунт? Войдите"}
             </button>

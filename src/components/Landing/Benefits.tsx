@@ -16,7 +16,7 @@ const benefits = [
 const Benefits = () => (
   <section id="benefits" className="py-28 relative overflow-hidden">
     <div className="absolute inset-0 bg-muted/30" />
-    <div className="absolute inset-0 gradient-mesh opacity-30" />
+    <div className="absolute inset-0 gradient-mesh opacity-20" />
     <div className="container mx-auto px-4 relative">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -35,7 +35,7 @@ const Benefits = () => (
         </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-5 max-w-6xl mx-auto">
+      <div className="grid md:grid-cols-3 gap-4 max-w-6xl mx-auto">
         {benefits.map((b, i) => (
           <motion.div
             key={b.title}
@@ -44,13 +44,12 @@ const Benefits = () => (
             viewport={{ once: true }}
             transition={{ delay: i * 0.06 }}
             whileHover={{ y: -6, transition: { duration: 0.3 } }}
-            className="group glass rounded-2xl p-6 hover:shadow-elevated transition-all duration-500 relative overflow-hidden"
+            className="group bg-card border border-border rounded-2xl p-6 hover:shadow-elevated transition-all duration-500 relative overflow-hidden"
           >
-            {/* Hover glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 to-accent/3 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
 
             <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+              <div className="w-12 h-12 rounded-2xl bg-primary/8 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
                 <b.icon className="h-6 w-6 text-primary" />
               </div>
               <h3 className="font-display font-semibold text-lg mb-2">{b.title}</h3>
