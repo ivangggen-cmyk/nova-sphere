@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Clock, Users, AlertCircle, CheckCircle2, FileText, MessageCircle, Briefcase } from "lucide-react";
+import { ArrowLeft, Clock, Users, AlertCircle, CheckCircle2, FileText, Briefcase } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,20 +22,10 @@ const TaskDetail = () => {
 
   useEffect(() => {
     const fetchTask = async () => {
-      const { data } = await supabase
-        .from("tasks")
-        .select("*, task_categories(name)")
-        .eq("id", id)
-        .single();
+      const { data } = await supabase.from("tasks").select("*, task_categories(name)").eq("id", id).single();
       setTask(data);
-
       if (user && data) {
-        const { data: existing } = await supabase
-          .from("user_tasks")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("task_id", data.id)
-          .maybeSingle();
+        const { data: existing } = await supabase.from("user_tasks").select("id").eq("user_id", user.id).eq("task_id", data.id).maybeSingle();
         setAlreadyTaken(!!existing);
       }
       setLoading(false);
@@ -47,23 +37,14 @@ const TaskDetail = () => {
     if (!user || !task) return;
     setTaking(true);
     try {
-      const { error } = await supabase.from("user_tasks").insert({
-        user_id: user.id,
-        task_id: task.id,
-        status: "assigned",
-      });
+      const { error } = await supabase.from("user_tasks").insert({ user_id: user.id, task_id: task.id, status: "assigned" });
       if (error) throw error;
-
-      // Increment taken_spots
       await supabase.from("tasks").update({ taken_spots: task.taken_spots + 1 }).eq("id", task.id);
-
-      toast({ title: "Задание взято в работу!", description: "Перейдите в раздел «Отправить отчёт» для отправки результата." });
+      toast({ title: "Задание взято!", description: "Перейдите в «Отчёт» для отправки результата." });
       navigate("/dashboard/report");
     } catch (error: any) {
       toast({ title: "Ошибка", description: error.message, variant: "destructive" });
-    } finally {
-      setTaking(false);
-    }
+    } finally { setTaking(false); }
   };
 
   if (loading) return <DashboardLayout><div className="text-center py-12 text-muted-foreground">Загрузка...</div></DashboardLayout>;
@@ -72,90 +53,64 @@ const TaskDetail = () => {
   return (
     <DashboardLayout>
       <Link to="/dashboard/tasks" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
-        <ArrowLeft className="h-4 w-4" /> Назад к заданиям
+        <ArrowLeft className="h-4 w-4" /> Назад
       </Link>
-
       <div className="grid lg:grid-cols-3 gap-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 space-y-6">
-          <div className="glass rounded-2xl p-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <Badge variant="outline" className="mb-2">{task.task_categories?.name}</Badge>
-                <h1 className="text-xl font-bold mb-1">{task.title}</h1>
+                <h1 className="text-xl font-display font-bold mb-1">{task.title}</h1>
               </div>
-              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-accent/10 text-accent">Доступно</span>
+              <span className="px-3 py-1.5 rounded-xl text-xs font-medium bg-success/10 text-success">Доступно</span>
             </div>
             <div className="grid grid-cols-3 gap-4 text-center py-4">
-              <div>
-                <div className="text-lg font-bold">{Number(task.reward).toLocaleString("ru-RU")} ₽</div>
-                <div className="text-xs text-muted-foreground">Вознаграждение</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold flex items-center justify-center gap-1"><Clock className="h-4 w-4" />
-                  {task.deadline ? new Date(task.deadline).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "—"}
-                </div>
-                <div className="text-xs text-muted-foreground">Срок выполнения</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold flex items-center justify-center gap-1"><Users className="h-4 w-4" /> {task.taken_spots}/{task.total_spots}</div>
-                <div className="text-xs text-muted-foreground">Мест занято</div>
-              </div>
+              <div><div className="text-lg font-mono font-bold">{Number(task.reward).toLocaleString("ru-RU")} ₽</div><div className="text-xs text-muted-foreground">Вознаграждение</div></div>
+              <div><div className="text-lg font-bold flex items-center justify-center gap-1"><Clock className="h-4 w-4" />{task.deadline ? new Date(task.deadline).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) : "—"}</div><div className="text-xs text-muted-foreground">Срок</div></div>
+              <div><div className="text-lg font-bold flex items-center justify-center gap-1"><Users className="h-4 w-4" /> {task.taken_spots}/{task.total_spots}</div><div className="text-xs text-muted-foreground">Мест</div></div>
             </div>
           </div>
-
-          <div className="glass rounded-2xl p-6">
-            <h3 className="font-semibold mb-3 flex items-center gap-2"><FileText className="h-4 w-4" /> Описание</h3>
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <h3 className="font-display font-semibold text-sm mb-3 flex items-center gap-2"><FileText className="h-4 w-4" /> Описание</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{task.description}</p>
           </div>
-
-          {task.steps && task.steps.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h3 className="font-semibold mb-4">Пошаговая инструкция</h3>
+          {task.steps?.length > 0 && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-display font-semibold text-sm mb-4">Инструкция</h3>
               <div className="space-y-3">
                 {task.steps.map((step: string, i: number) => (
                   <div key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full gradient-accent flex items-center justify-center text-xs text-accent-foreground font-bold shrink-0 mt-0.5">{i + 1}</div>
+                    <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center text-xs text-primary-foreground font-bold shrink-0 mt-0.5">{i + 1}</div>
                     <p className="text-sm">{step}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
-          {task.criteria && task.criteria.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Критерии проверки</h3>
+          {task.criteria?.length > 0 && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-display font-semibold text-sm mb-3 flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Критерии</h3>
               <ul className="space-y-2">
                 {task.criteria.map((c: string, i: number) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-accent shrink-0 mt-0.5" />{c}
-                  </li>
+                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />{c}</li>
                 ))}
               </ul>
             </div>
           )}
         </motion.div>
-
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-4">
-          <div className="glass rounded-2xl p-6 space-y-4">
-            <Button className="w-full gradient-accent text-accent-foreground border-0" size="lg" onClick={handleTakeTask} disabled={taking || alreadyTaken}>
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+            <Button className="w-full gradient-primary text-primary-foreground border-0 rounded-xl" size="lg" onClick={handleTakeTask} disabled={taking || alreadyTaken}>
               <Briefcase className="mr-2 h-4 w-4" /> {alreadyTaken ? "Уже в работе" : "Взять в работу"}
             </Button>
             <Separator />
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">Сложность</div>
-              <div className="text-sm font-medium">{task.difficulty}</div>
-            </div>
+            <div><div className="text-xs text-muted-foreground mb-1">Сложность</div><div className="text-sm font-medium">{task.difficulty}</div></div>
           </div>
-
-          {task.materials && task.materials.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><AlertCircle className="h-4 w-4" /> Материалы</h4>
-              <div className="space-y-2">
-                {task.materials.map((m: string) => (
-                  <div key={m} className="text-sm text-accent hover:underline cursor-pointer">{m}</div>
-                ))}
-              </div>
+          {task.materials?.length > 0 && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h4 className="font-display font-semibold text-sm mb-3 flex items-center gap-2"><AlertCircle className="h-4 w-4" /> Материалы</h4>
+              <div className="space-y-2">{task.materials.map((m: string) => (<div key={m} className="text-sm text-primary hover:underline cursor-pointer">{m}</div>))}</div>
             </div>
           )}
         </motion.div>

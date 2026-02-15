@@ -10,96 +10,44 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 const Referrals = () => {
-  const { toast } = useToast();
-  const { user, profile } = useAuth();
-  const [referrals, setReferrals] = useState<any[]>([]);
-  const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
+  const { toast } = useToast(); const { user, profile } = useAuth();
+  const [referrals, setReferrals] = useState<any[]>([]); const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchData = async () => {
-      const { data: refsData } = await supabase
-        .from("referrals")
-        .select("*")
-        .eq("referrer_id", user.id)
-        .order("created_at", { ascending: false });
-
-      const refs = refsData || [];
-      setReferrals(refs);
-
-      // Fetch referred profiles
-      const referredIds = refs.map(r => r.referred_id);
-      if (referredIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, created_at")
-          .in("user_id", referredIds);
-        const map = new Map((profilesData || []).map(p => [p.user_id, p]));
-        setProfiles(map);
-      }
-    };
-    fetchData();
-  }, [user]);
+  useEffect(() => { if (!user) return; const f = async () => {
+    const { data: r } = await supabase.from("referrals").select("*").eq("referrer_id", user.id).order("created_at", { ascending: false });
+    const refs = r || []; setReferrals(refs);
+    const ids = refs.map(r => r.referred_id); if (ids.length) { const { data: p } = await supabase.from("profiles").select("user_id, full_name, created_at").in("user_id", ids); setProfiles(new Map((p || []).map(p => [p.user_id, p]))); }
+  }; f(); }, [user]);
 
   const link = `${window.location.origin}/auth?ref=${profile?.referral_code || ""}`;
   const totalEarned = referrals.reduce((s, r) => s + Number(r.bonus_amount), 0);
 
   return (
     <DashboardLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">Реферальная программа</h1>
-        <p className="text-sm text-muted-foreground">Приглашайте друзей и зарабатывайте вместе</p>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="mb-6"><h1 className="text-2xl font-display font-bold mb-1">Рефералы</h1><p className="text-sm text-muted-foreground">Приглашайте друзей</p></div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         <StatCard icon={Users} label="Приглашено" value={String(referrals.length)} positive />
-        <StatCard icon={TrendingUp} label="Заработок с рефералов" value={`${totalEarned.toLocaleString("ru-RU")} ₽`} positive />
+        <StatCard icon={TrendingUp} label="Заработок" value={`${totalEarned.toLocaleString("ru-RU")} ₽`} positive />
         <StatCard icon={Gift} label="Бонусы" value={`${totalEarned.toLocaleString("ru-RU")} ₽`} />
         <StatCard icon={Share2} label="Уровней" value="3" />
       </div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6 mb-6">
-        <h3 className="font-semibold mb-3">Ваша реферальная ссылка</h3>
-        <div className="flex gap-2">
-          <Input value={link} readOnly className="flex-1" />
-          <Button onClick={() => { navigator.clipboard.writeText(link); toast({ title: "Ссылка скопирована!" }); }}
-            className="gradient-accent text-accent-foreground border-0">
-            <Copy className="h-4 w-4 mr-2" /> Копировать
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mt-3">Вы получаете 10% от дохода рефералов 1-го уровня, 5% — 2-го, 2% — 3-го.</p>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card border border-border rounded-2xl p-6 mb-6">
+        <h3 className="font-display font-semibold text-sm mb-3">Ваша ссылка</h3>
+        <div className="flex gap-2"><Input value={link} readOnly className="flex-1 rounded-xl font-mono text-xs" />
+          <Button onClick={() => { navigator.clipboard.writeText(link); toast({ title: "Скопировано!" }); }} className="gradient-primary text-primary-foreground border-0 rounded-xl"><Copy className="h-4 w-4 mr-2" /> Копировать</Button></div>
+        <p className="text-xs text-muted-foreground mt-3">10% от 1-го уровня, 5% — 2-го, 2% — 3-го.</p>
       </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-6">
-        <h3 className="font-semibold mb-4">Ваши рефералы</h3>
-        {referrals.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Пока никого не пригласили</p>
-        ) : (
-          <div className="space-y-3">
-            {referrals.map((r) => {
-              const refProfile = profiles.get(r.referred_id);
-              return (
-                <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full gradient-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-                      {(refProfile?.full_name || "?")[0]}
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{refProfile?.full_name || "Пользователь"}</div>
-                      <div className="text-xs text-muted-foreground">Уровень {r.level}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold">{Number(r.bonus_amount).toLocaleString("ru-RU")} ₽</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card border border-border rounded-2xl p-6">
+        <h3 className="font-display font-semibold text-sm mb-4">Ваши рефералы</h3>
+        {referrals.length === 0 ? <p className="text-muted-foreground text-sm">Пока нет</p> : (
+          <div className="space-y-2">{referrals.map((r) => { const p = profiles.get(r.referred_id); return (
+            <div key={r.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground text-xs font-bold">{(p?.full_name || "?")[0]}</div>
+                <div><div className="text-sm font-medium">{p?.full_name || "Пользователь"}</div><div className="text-xs text-muted-foreground">Уровень {r.level}</div></div></div>
+              <div className="text-sm font-mono font-semibold">{Number(r.bonus_amount).toLocaleString("ru-RU")} ₽</div>
+            </div>); })}</div>)}
       </motion.div>
     </DashboardLayout>
   );
 };
-
 export default Referrals;
