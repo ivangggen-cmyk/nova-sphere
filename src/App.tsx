@@ -10,6 +10,7 @@ import TaskDetail from "./pages/TaskDetail";
 import Referrals from "./pages/Referrals";
 import Payments from "./pages/Payments";
 import SettingsPage from "./pages/Settings";
+import Report from "./pages/Report";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,7 +31,7 @@ const App = () => (
           <Route path="/dashboard/payments" element={<Payments />} />
           <Route path="/dashboard/settings" element={<SettingsPage />} />
           <Route path="/dashboard/archive" element={<Tasks />} />
-          <Route path="/dashboard/report" element={<Dashboard />} />
+          <Route path="/dashboard/report" element={<Report />} />
           <Route path="/dashboard/stats" element={<Dashboard />} />
           <Route path="/dashboard/notifications" element={<Dashboard />} />
           <Route path="/dashboard/verification" element={<SettingsPage />} />

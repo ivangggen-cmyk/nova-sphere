@@ -1,33 +1,37 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Clock, ChevronRight } from "lucide-react";
+import { Search, Clock, ChevronRight, Briefcase, Users, Shield, Plane, Banknote, Building2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-const categories = ["Все", "Финансы", "Тестирование", "Маркетинг", "Регистрации", "Опросы"];
+const categories = ["Все", "Банковские услуги", "Подбор персонала", "Страхование", "Туризм", "Займы"];
+
+const categoryIcons: Record<string, any> = {
+  "Банковские услуги": Building2,
+  "Подбор персонала": Users,
+  "Страхование": Shield,
+  "Туризм": Plane,
+  "Займы": Banknote,
+};
 
 const tasks = [
-  { id: 1, title: "Регистрация в сервисе FinApp", category: "Регистрации", reward: "850 ₽", deadline: "16 фев", difficulty: "Легко", spots: 12, status: "available" },
-  { id: 2, title: "Обзор мобильного приложения BankX", category: "Тестирование", reward: "1 200 ₽", deadline: "18 фев", difficulty: "Средне", spots: 5, status: "review" },
-  { id: 3, title: "Тестирование платёжной формы", category: "Тестирование", reward: "2 000 ₽", deadline: "20 фев", difficulty: "Сложно", spots: 3, status: "in_progress" },
-  { id: 4, title: "Заполнение анкеты страхования", category: "Финансы", reward: "500 ₽", deadline: "15 фев", difficulty: "Легко", spots: 50, status: "available" },
-  { id: 5, title: "Маркетинговый опрос B2B", category: "Опросы", reward: "300 ₽", deadline: "22 фев", difficulty: "Легко", spots: 100, status: "available" },
-  { id: 6, title: "Публикация отзыва о сервисе", category: "Маркетинг", reward: "750 ₽", deadline: "17 фев", difficulty: "Средне", spots: 20, status: "available" },
+  { id: 1, title: "Открой ИП и получи вознаграждение", category: "Банковские услуги", reward: "3 500 ₽", deadline: "28 фев", difficulty: "Средне", spots: 50, status: "available" },
+  { id: 2, title: "Найди курьера для Яндекс Еда", category: "Подбор персонала", reward: "2 000 ₽", deadline: "20 фев", difficulty: "Легко", spots: 100, status: "available" },
+  { id: 3, title: "Оформи дебетовую карту Тинькофф", category: "Банковские услуги", reward: "1 500 ₽", deadline: "25 фев", difficulty: "Легко", spots: 200, status: "available" },
+  { id: 4, title: "Оформи полис ОСАГО онлайн", category: "Страхование", reward: "1 200 ₽", deadline: "22 фев", difficulty: "Легко", spots: 80, status: "available" },
+  { id: 5, title: "Подбери водителя в Яндекс Такси", category: "Подбор персонала", reward: "1 800 ₽", deadline: "18 фев", difficulty: "Средне", spots: 30, status: "available" },
+  { id: 6, title: "Забронируй тур через партнёра", category: "Туризм", reward: "4 000 ₽", deadline: "1 мар", difficulty: "Сложно", spots: 15, status: "available" },
+  { id: 7, title: "Оформи микрозайм через сервис", category: "Займы", reward: "900 ₽", deadline: "19 фев", difficulty: "Легко", spots: 150, status: "available" },
+  { id: 8, title: "Найди сотрудника в Delivery Club", category: "Подбор персонала", reward: "2 200 ₽", deadline: "24 фев", difficulty: "Средне", spots: 40, status: "available" },
 ];
 
 const difficultyColors: Record<string, string> = {
   "Легко": "bg-accent/10 text-accent",
   "Средне": "bg-amber-100 text-amber-700",
   "Сложно": "bg-red-100 text-red-700",
-};
-
-const statusLabels: Record<string, string> = {
-  available: "Доступно",
-  in_progress: "В работе",
-  review: "На проверке",
 };
 
 const Tasks = () => {
@@ -90,7 +94,7 @@ const Tasks = () => {
                   <Badge variant="outline" className="shrink-0 text-xs">{task.category}</Badge>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {task.deadline}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> до {task.deadline}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${difficultyColors[task.difficulty]}`}>{task.difficulty}</span>
                   <span>Мест: {task.spots}</span>
                 </div>

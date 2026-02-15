@@ -6,7 +6,7 @@ const Footer = () => (
       <div className="grid md:grid-cols-4 gap-8 mb-8">
         <div>
           <div className="text-xl font-bold text-primary-foreground mb-3">
-            <span className="gradient-text">Work</span>Flow
+            <span className="gradient-text">Atlantic</span>
           </div>
           <p className="text-sm">Платформа для онлайн-заработка нового поколения</p>
         </div>
@@ -21,8 +21,8 @@ const Footer = () => (
         <div>
           <h4 className="font-semibold text-primary-foreground mb-3 text-sm">Поддержка</h4>
           <div className="space-y-2 text-sm">
-            <span className="block">help@workflow.ru</span>
-            <span className="block">Telegram: @workflow</span>
+            <span className="block">help@atlantic.ru</span>
+            <span className="block">Telegram: @atlantic</span>
           </div>
         </div>
         <div>
@@ -34,7 +34,7 @@ const Footer = () => (
         </div>
       </div>
       <div className="border-t border-primary-foreground/10 pt-6 text-center text-xs">
-        © 2026 WorkFlow. Все права защищены.
+        © 2026 Atlantic. Все права защищены.
       </div>
     </div>
   </footer>

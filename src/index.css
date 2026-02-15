@@ -4,78 +4,78 @@
 
 @layer base {
   :root {
-    --background: 220 25% 97%;
-    --foreground: 220 30% 10%;
+    --background: 215 30% 97%;
+    --foreground: 215 25% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 30% 10%;
+    --card: 210 30% 99%;
+    --card-foreground: 215 25% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 10%;
+    --popover: 210 30% 99%;
+    --popover-foreground: 215 25% 15%;
 
-    --primary: 220 65% 18%;
+    --primary: 215 55% 45%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 30% 10%;
+    --secondary: 215 20% 93%;
+    --secondary-foreground: 215 25% 15%;
 
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 215 20% 95%;
+    --muted-foreground: 215 12% 50%;
 
-    --accent: 160 55% 42%;
+    --accent: 200 65% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 160 55% 42%;
+    --border: 215 20% 91%;
+    --input: 215 20% 91%;
+    --ring: 200 65% 50%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 220 30% 10%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 160 55% 42%;
+    --sidebar-background: 215 30% 12%;
+    --sidebar-foreground: 215 15% 85%;
+    --sidebar-primary: 200 65% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 16%;
-    --sidebar-accent-foreground: 220 10% 85%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 160 55% 42%;
+    --sidebar-accent: 215 25% 18%;
+    --sidebar-accent-foreground: 215 15% 85%;
+    --sidebar-border: 215 25% 20%;
+    --sidebar-ring: 200 65% 50%;
 
-    --emerald: 160 55% 42%;
-    --emerald-light: 160 50% 90%;
-    --deep-blue: 220 65% 18%;
-    --graphite: 220 15% 30%;
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.2;
-    --gradient-primary: linear-gradient(135deg, hsl(220 65% 18%), hsl(220 55% 30%));
-    --gradient-accent: linear-gradient(135deg, hsl(160 55% 42%), hsl(170 60% 50%));
-    --gradient-hero: linear-gradient(135deg, hsl(220 65% 8%), hsl(220 50% 15%), hsl(160 40% 20%));
-    --shadow-glass: 0 8px 32px hsl(220 65% 18% / 0.08);
-    --shadow-elevated: 0 20px 60px hsl(220 65% 18% / 0.12);
+    --emerald: 200 65% 50%;
+    --emerald-light: 200 50% 92%;
+    --deep-blue: 215 55% 45%;
+    --graphite: 215 15% 35%;
+    --glass-bg: 210 30% 99% / 0.75;
+    --glass-border: 215 30% 85% / 0.5;
+    --gradient-primary: linear-gradient(135deg, hsl(215 55% 45%), hsl(200 55% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(200 65% 50%), hsl(190 70% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(215 40% 12%), hsl(215 35% 22%), hsl(200 40% 28%));
+    --shadow-glass: 0 8px 32px hsl(215 55% 45% / 0.06);
+    --shadow-elevated: 0 20px 60px hsl(215 55% 45% / 0.1);
   }
 
   .dark {
-    --background: 220 30% 6%;
+    --background: 215 30% 6%;
     --foreground: 210 40% 95%;
-    --card: 220 25% 10%;
+    --card: 215 25% 10%;
     --card-foreground: 210 40% 95%;
-    --popover: 220 25% 10%;
+    --popover: 215 25% 10%;
     --popover-foreground: 210 40% 95%;
-    --primary: 160 55% 42%;
+    --primary: 200 65% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 15%;
+    --secondary: 215 20% 15%;
     --secondary-foreground: 210 40% 95%;
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 160 55% 42%;
+    --muted: 215 20% 15%;
+    --muted-foreground: 215 12% 55%;
+    --accent: 200 65% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 160 55% 42%;
+    --border: 215 20% 18%;
+    --input: 215 20% 18%;
+    --ring: 200 65% 50%;
   }
 }
 
@@ -99,7 +99,7 @@
   }
 
   .glass-dark {
-    background: hsl(220 30% 10% / 0.8);
+    background: hsl(215 30% 10% / 0.8);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid hsl(0 0% 100% / 0.08);
