@@ -111,6 +111,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          payment_method: string | null
           status: Database["public"]["Enums"]["payment_status"]
           transaction_id: string | null
           type: Database["public"]["Enums"]["payment_type"]
@@ -122,6 +123,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
           transaction_id?: string | null
           type: Database["public"]["Enums"]["payment_type"]
@@ -133,6 +135,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          payment_method?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
           transaction_id?: string | null
           type?: Database["public"]["Enums"]["payment_type"]
@@ -419,6 +422,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_requisites: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          is_default: boolean
+          method: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string
+          id?: string
+          is_default?: boolean
+          method: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          is_default?: boolean
+          method?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
