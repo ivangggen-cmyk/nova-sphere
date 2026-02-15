@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, ClipboardList, CreditCard, Settings, BarChart3,
-  Shield, Bell, FileText, ChevronLeft, LogOut, Search, Plus, Eye, Ban,
+  Shield, Bell, FileText, LogOut, Search, Plus, Ban,
   Edit, Trash2, CheckCircle2, XCircle, Clock, DollarSign, TrendingUp,
-  Mail, Globe, Lock, Megaphone, Save, RefreshCw, UserPlus, AlertTriangle,
-  Download, Upload, Filter, MoreVertical, Activity, Database, Zap, Award,
-  MessageSquare, Layers, Tag, Target, Percent, ArrowUpRight, ArrowDownRight,
-  Calendar, Hash, Star, PieChart, Bookmark, Send, ShieldCheck
+  Globe, Lock, Megaphone, RefreshCw,
+  Activity, Award, Send, ShieldCheck, Tag, Layers, ChevronDown, Menu, X,
+  ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import AtlanticLogo from "@/components/AtlanticLogo";
 
 const adminNav = [
   { label: "Обзор", icon: LayoutDashboard, tab: "overview" },
@@ -41,10 +41,29 @@ const adminNav = [
   { label: "Логи", icon: Activity, tab: "logs" },
 ];
 
+const mainAdminTabs = [
+  { label: "Обзор", icon: LayoutDashboard, tab: "overview" },
+  { label: "Пользователи", icon: Users, tab: "users" },
+  { label: "Задания", icon: ClipboardList, tab: "tasks" },
+  { label: "Финансы", icon: CreditCard, tab: "finance" },
+  { label: "Отчёты", icon: FileText, tab: "reports" },
+];
+
+const mobileAdminTabs = [
+  { label: "Обзор", icon: LayoutDashboard, tab: "overview" },
+  { label: "Юзеры", icon: Users, tab: "users" },
+  { label: "Финансы", icon: CreditCard, tab: "finance" },
+  { label: "Отчёты", icon: FileText, tab: "reports" },
+  { label: "Ещё", icon: Menu, tab: "__more__" },
+];
+
 const Admin = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Data states
   const [users, setUsers] = useState<any[]>([]);
@@ -59,7 +78,6 @@ const Admin = () => {
   const [news, setNews] = useState<any[]>([]);
   const [allNotifications, setAllNotifications] = useState<any[]>([]);
   const [allRequisites, setAllRequisites] = useState<any[]>([]);
-  // Search states
   const [searchUsers, setSearchUsers] = useState("");
   const [searchTasks, setSearchTasks] = useState("");
   
@@ -90,13 +108,11 @@ const Admin = () => {
   const [notifMessage, setNotifMessage] = useState("");
   const [notifType, setNotifType] = useState<string>("info");
   
-  // Edit states
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState("");
   const [editTaskReward, setEditTaskReward] = useState("");
   const [editTaskStatus, setEditTaskStatus] = useState("");
 
-  // Stats
   const [stats, setStats] = useState({ users: 0, activeTasks: 0, totalPaid: 0, pendingReports: 0 });
 
   const fetchAll = useCallback(async () => {
@@ -120,7 +136,6 @@ const Admin = () => {
     setTasks(tasksR.data || []);
     setCategories(catsR.data || []);
 
-    // Enrich with profile names
     const profileMap = new Map(profilesData.map((p: any) => [p.user_id, p]));
     const enriched = (arr: any[]) => arr.map(item => ({ ...item, profiles: profileMap.get(item.user_id) || null }));
 
@@ -128,7 +143,6 @@ const Admin = () => {
     setReports(enriched(reportsR.data || []));
     setAllNotifications(enriched(notifsR.data || []));
 
-    // Enrich referrals
     const refsEnriched = (refsR.data || []).map((r: any) => ({
       ...r,
       referrer: profileMap.get(r.referrer_id) || null,
@@ -140,7 +154,6 @@ const Admin = () => {
     setSecurityLogs(logsR.data || []);
     setBanners(bannersR.data || []);
     setNews(newsR.data || []);
-    // Enrich requisites with profile names
     setAllRequisites(enriched(reqsR.data || []));
     const totalPaid = (txR.data || []).filter((t: any) => t.status === "completed" || t.status === "approved").reduce((s: number, t: any) => s + Number(t.amount), 0);
     const pendingReports = (reportsR.data || []).filter((r: any) => r.status === "pending").length;
@@ -160,10 +173,10 @@ const Admin = () => {
   };
 
   const updateUserBalance = async (userId: string, amount: number) => {
-    const user = users.find(u => u.user_id === userId);
-    if (!user) return;
-    const newBalance = Number(user.balance) + amount;
-    await supabase.from("profiles").update({ balance: newBalance, total_earned: Number(user.total_earned) + (amount > 0 ? amount : 0) }).eq("user_id", userId);
+    const u = users.find(u => u.user_id === userId);
+    if (!u) return;
+    const newBalance = Number(u.balance) + amount;
+    await supabase.from("profiles").update({ balance: newBalance, total_earned: Number(u.total_earned) + (amount > 0 ? amount : 0) }).eq("user_id", userId);
     setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, balance: newBalance, total_earned: Number(u.total_earned) + (amount > 0 ? amount : 0) } : u));
     toast({ title: `Баланс обновлён: ${amount > 0 ? "+" : ""}${amount} ₽` });
   };
@@ -177,7 +190,6 @@ const Admin = () => {
   const verifyUser = async (userId: string, verified: boolean) => {
     await supabase.from("profiles").update({ is_verified: verified }).eq("user_id", userId);
     setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, is_verified: verified } : u));
-    // Notify user
     await supabase.from("notifications").insert({
       user_id: userId, type: "success" as const,
       title: verified ? "Аккаунт верифицирован!" : "Верификация отменена",
@@ -188,7 +200,6 @@ const Admin = () => {
   };
 
   const deleteUser = async (userId: string) => {
-    // Just block and mark
     await supabase.from("profiles").update({ is_blocked: true }).eq("user_id", userId);
     setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, is_blocked: true } : u));
     toast({ title: "Пользователь удалён (заблокирован)" });
@@ -258,7 +269,6 @@ const Admin = () => {
     await supabase.from("payments").update({ status: "approved" as const, completed_at: new Date().toISOString() }).eq("id", id);
     const tx = transactions.find(t => t.id === id);
     if (tx && tx.type === "withdrawal") {
-      // Balance already deducted on request, just update total_withdrawn
       const userProfile = users.find(u => u.user_id === tx.user_id);
       if (userProfile) {
         const newWithdrawn = Number(userProfile.total_withdrawn) + Number(tx.amount);
@@ -274,7 +284,6 @@ const Admin = () => {
   const rejectPayment = async (id: string) => {
     const tx = transactions.find(t => t.id === id);
     await supabase.from("payments").update({ status: "rejected" as const }).eq("id", id);
-    // Return balance to user on rejection
     if (tx && tx.type === "withdrawal") {
       const userProfile = users.find(u => u.user_id === tx.user_id);
       if (userProfile) {
@@ -282,7 +291,6 @@ const Admin = () => {
         await supabase.from("profiles").update({ balance: newBal }).eq("user_id", tx.user_id);
         setUsers(prev => prev.map(u => u.user_id === tx.user_id ? { ...u, balance: newBal } : u));
       }
-      // Notify user
       if (tx.user_id) {
         await supabase.from("notifications").insert({
           user_id: tx.user_id, type: "warning" as const,
@@ -314,13 +322,11 @@ const Admin = () => {
     await supabase.from("reports").update({ status: "approved" as const, reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (report?.user_task_id) {
       await supabase.from("user_tasks").update({ status: "approved" as const, completed_at: new Date().toISOString() }).eq("id", report.user_task_id);
-      // Get task reward and pay user
       const { data: ut } = await supabase.from("user_tasks").select("*, tasks(reward)").eq("id", report.user_task_id).single();
       if (ut?.tasks?.reward && report?.user_id) {
         await createPayment(report.user_id, Number(ut.tasks.reward), "reward", `Награда за задание`);
         await supabase.from("profiles").update({ tasks_completed: (users.find(u => u.user_id === report.user_id)?.tasks_completed || 0) + 1 }).eq("user_id", report.user_id);
       }
-      // Send notification
       if (report?.user_id) {
         await supabase.from("notifications").insert({ user_id: report.user_id, type: "success" as const, title: "Отчёт одобрен!", message: "Ваш отчёт был одобрен. Вознаграждение начислено." });
       }
@@ -414,7 +420,6 @@ const Admin = () => {
     toast({ title: `Рассылка отправлена ${users.length} пользователям` });
   };
 
-  // ====== LOG ACTION ======
   const logAction = async (event: string, details: string = "") => {
     await supabase.from("security_logs").insert({ user_id: user?.id, event, details });
   };
@@ -431,45 +436,189 @@ const Admin = () => {
   const pendingPayments = transactions.filter(t => t.status === "pending");
   const pendingReports = reports.filter(r => r.status === "pending");
 
-  return (
-    <div className="flex min-h-screen">
-      <aside className="hidden lg:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border fixed inset-y-0 left-0 z-40">
-        <div className="p-5 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2 text-lg font-bold">
-            <ChevronLeft className="h-4 w-4 text-sidebar-foreground/50" />
-            <span className="text-accent">Atlantic</span>
-            <Badge className="ml-1 bg-accent/20 text-accent border-0 text-[10px]">Admin</Badge>
-          </Link>
-        </div>
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {adminNav.map((item) => (
-            <button key={item.tab} onClick={() => setActiveTab(item.tab)}
-              className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all w-full text-left",
-                activeTab === item.tab ? "bg-sidebar-accent text-accent font-medium" : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground")}>
-              <item.icon className="h-4 w-4 shrink-0" />
-              {item.label}
-              {item.tab === "reports" && pendingReports.length > 0 && <Badge className="ml-auto bg-destructive text-destructive-foreground text-[10px] h-5">{pendingReports.length}</Badge>}
-              {item.tab === "finance" && pendingPayments.length > 0 && <Badge className="ml-auto bg-amber-500 text-white text-[10px] h-5">{pendingPayments.length}</Badge>}
-            </button>
-          ))}
-        </nav>
-        <div className="p-3 border-t border-sidebar-border space-y-1">
-          <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground/50" onClick={() => { fetchAll(); toast({ title: "Данные обновлены" }); }}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Обновить
-          </Button>
-          <Link to="/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors">
-            <LogOut className="h-4 w-4" /> В кабинет
-          </Link>
-        </div>
-      </aside>
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
-      <main className="flex-1 lg:ml-64">
+  return (
+    <div className="min-h-screen bg-background">
+      {/* ===== DESKTOP TOP NAV ===== */}
+      <header className="hidden md:block fixed top-0 left-0 right-0 z-50 glass-strong border-b border-border">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <AtlanticLogo size="sm" />
+            <Badge className="bg-primary/15 text-primary border-0 text-[10px] font-semibold">ADMIN</Badge>
+          </Link>
+
+          <nav className="flex items-center gap-1 bg-muted/50 rounded-2xl p-1">
+            {mainAdminTabs.map((item) => (
+              <button
+                key={item.tab}
+                onClick={() => setActiveTab(item.tab)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+                  activeTab === item.tab
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                <span className="hidden lg:inline">{item.label}</span>
+                {item.tab === "reports" && pendingReports.length > 0 && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">{pendingReports.length}</span>
+                )}
+                {item.tab === "finance" && pendingPayments.length > 0 && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold">{pendingPayments.length}</span>
+                )}
+              </button>
+            ))}
+
+            <div className="relative">
+              <button
+                onClick={() => setMoreOpen(!moreOpen)}
+                className={cn(
+                  "flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+                  moreOpen ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span className="hidden lg:inline">Ещё</span>
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", moreOpen && "rotate-180")} />
+              </button>
+
+              <AnimatePresence>
+                {moreOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-2xl shadow-elevated p-2 z-50"
+                    >
+                      {adminNav.filter(item => !mainAdminTabs.some(t => t.tab === item.tab)).map((item) => (
+                        <button
+                          key={item.tab}
+                          onClick={() => { setActiveTab(item.tab); setMoreOpen(false); }}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all w-full text-left",
+                            activeTab === item.tab
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.label}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </nav>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={() => { fetchAll(); toast({ title: "Данные обновлены" }); }}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <div className="h-6 w-px bg-border" />
+            <Link to="/dashboard">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-xs">В кабинет</Button>
+            </Link>
+            <button onClick={handleSignOut} className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Выйти">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ===== MOBILE TOP BAR ===== */}
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border flex items-center justify-between px-4">
+        <Link to="/" className="flex items-center gap-2">
+          <AtlanticLogo size="sm" />
+          <Badge className="bg-primary/15 text-primary border-0 text-[10px]">ADMIN</Badge>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={() => { fetchAll(); toast({ title: "Обновлено" }); }}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
+
+      {/* ===== MOBILE BOTTOM TAB BAR ===== */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-strong border-t border-border">
+        <div className="flex items-center justify-around h-16 px-2">
+          {mobileAdminTabs.map((item) => {
+            if (item.tab === "__more__") {
+              return (
+                <button key="more" onClick={() => setMobileMenuOpen(true)} className="flex flex-col items-center gap-1 py-1 px-3">
+                  <Menu className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Ещё</span>
+                </button>
+              );
+            }
+            const active = activeTab === item.tab;
+            return (
+              <button key={item.tab} onClick={() => setActiveTab(item.tab)} className="flex flex-col items-center gap-1 py-1 px-3">
+                <item.icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-[10px]", active ? "text-primary font-medium" : "text-muted-foreground")}>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ===== MOBILE FULL MENU ===== */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="md:hidden fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={() => setMobileMenuOpen(false)} />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl border-t border-border max-h-[75vh] overflow-y-auto"
+            >
+              <div className="p-2 pt-3 flex justify-center"><div className="w-10 h-1 rounded-full bg-muted" /></div>
+              <div className="p-4 space-y-1">
+                {adminNav.map((item) => (
+                  <button
+                    key={item.tab}
+                    onClick={() => { setActiveTab(item.tab); setMobileMenuOpen(false); }}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all w-full text-left",
+                      activeTab === item.tab ? "bg-primary/10 text-primary font-medium" : "text-foreground/70 hover:bg-muted"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                ))}
+                <div className="h-px bg-border my-2" />
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-muted-foreground hover:bg-muted w-full">
+                  <LogOut className="h-4 w-4" /> В кабинет
+                </Link>
+                <button onClick={() => { setMobileMenuOpen(false); handleSignOut(); }} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-destructive hover:bg-destructive/10 w-full">
+                  <LogOut className="h-4 w-4" /> Выйти
+                </button>
+              </div>
+              <div className="h-8" />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ===== MAIN CONTENT ===== */}
+      <main className="pt-14 md:pt-16 pb-20 md:pb-0">
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
 
           {/* ===== OVERVIEW ===== */}
           {activeTab === "overview" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Панель администратора</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Панель администратора</h1>
               <p className="text-sm text-muted-foreground mb-6">Обзор платформы Atlantic</p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard icon={Users} label="Пользователей" value={String(stats.users)} positive />
@@ -478,7 +627,7 @@ const Admin = () => {
                 <StatCard icon={FileText} label="Отчётов на проверке" value={String(stats.pendingReports)} />
               </div>
               <div className="grid lg:grid-cols-2 gap-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6">
+                <div className="glass rounded-2xl p-6">
                   <h3 className="font-semibold mb-4">Последние отчёты</h3>
                   <div className="space-y-3">
                     {pendingReports.slice(0, 5).map(r => (
@@ -495,8 +644,8 @@ const Admin = () => {
                     ))}
                     {pendingReports.length === 0 && <p className="text-sm text-muted-foreground">Нет отчётов на проверке</p>}
                   </div>
-                </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-6">
+                </div>
+                <div className="glass rounded-2xl p-6">
                   <h3 className="font-semibold mb-4">Ожидают выплат</h3>
                   <div className="space-y-3">
                     {pendingPayments.slice(0, 5).map(t => (
@@ -507,24 +656,24 @@ const Admin = () => {
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="font-semibold text-sm">{Number(t.amount).toLocaleString("ru-RU")} ₽</span>
-                          <Button size="sm" className="h-8 gradient-accent text-accent-foreground border-0" onClick={() => approvePayment(t.id)}>Подтвердить</Button>
+                          <Button size="sm" className="h-8 gradient-accent text-accent-foreground border-0" onClick={() => approvePayment(t.id)}>✓</Button>
                           <Button size="sm" variant="outline" className="h-8 text-destructive" onClick={() => rejectPayment(t.id)}>✕</Button>
                         </div>
                       </div>
                     ))}
                     {pendingPayments.length === 0 && <p className="text-sm text-muted-foreground">Нет ожидающих выплат</p>}
                   </div>
-                </motion.div>
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== USERS ===== */}
           {activeTab === "users" && (
-            <div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold mb-1">Пользователи</h1>
+                  <h1 className="text-2xl font-display font-bold mb-1">Пользователи</h1>
                   <p className="text-sm text-muted-foreground">{users.length} зарегистрированных</p>
                 </div>
               </div>
@@ -601,44 +750,47 @@ const Admin = () => {
                   </table>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== TASKS ===== */}
           {activeTab === "tasks" && (
-            <div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold mb-1">Управление заданиями</h1>
+                  <h1 className="text-2xl font-display font-bold mb-1">Управление заданиями</h1>
                   <p className="text-sm text-muted-foreground">{tasks.length} заданий</p>
                 </div>
               </div>
 
-              {/* Create task form */}
               <div className="glass rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2"><Plus className="h-4 w-4" /> Создать задание</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><Label className="text-xs">Название</Label><Input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Название задания" /></div>
                   <div><Label className="text-xs">Категория</Label>
                     <Select value={newTaskCategory} onValueChange={setNewTaskCategory}>
-                      <SelectTrigger><SelectValue placeholder="Выберите категорию" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Выберите" /></SelectTrigger>
                       <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div><Label className="text-xs">Вознаграждение (₽)</Label><Input type="number" value={newTaskReward} onChange={e => setNewTaskReward(e.target.value)} /></div>
+                  <div><Label className="text-xs">Награда (₽)</Label><Input type="number" value={newTaskReward} onChange={e => setNewTaskReward(e.target.value)} placeholder="100" /></div>
                   <div><Label className="text-xs">Сложность</Label>
                     <Select value={newTaskDifficulty} onValueChange={setNewTaskDifficulty}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="Легко">Легко</SelectItem><SelectItem value="Средне">Средне</SelectItem><SelectItem value="Сложно">Сложно</SelectItem></SelectContent>
+                      <SelectContent>
+                        <SelectItem value="Легко">Легко</SelectItem>
+                        <SelectItem value="Средне">Средне</SelectItem>
+                        <SelectItem value="Сложно">Сложно</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
-                  <div><Label className="text-xs">Кол-во мест</Label><Input type="number" value={newTaskSpots} onChange={e => setNewTaskSpots(e.target.value)} /></div>
-                  <div><Label className="text-xs">Дедлайн</Label><Input type="date" value={newTaskDeadline} onChange={e => setNewTaskDeadline(e.target.value)} /></div>
+                  <div><Label className="text-xs">Мест</Label><Input type="number" value={newTaskSpots} onChange={e => setNewTaskSpots(e.target.value)} /></div>
+                  <div><Label className="text-xs">Дедлайн</Label><Input type="datetime-local" value={newTaskDeadline} onChange={e => setNewTaskDeadline(e.target.value)} /></div>
                 </div>
                 <div className="space-y-4 mb-4">
-                  <div><Label className="text-xs">Описание</Label><Textarea value={newTaskDesc} onChange={e => setNewTaskDesc(e.target.value)} rows={3} /></div>
-                  <div><Label className="text-xs">Шаги (по одному на строку)</Label><Textarea value={newTaskSteps} onChange={e => setNewTaskSteps(e.target.value)} rows={3} placeholder="Шаг 1&#10;Шаг 2" /></div>
-                  <div><Label className="text-xs">Критерии проверки (по одному на строку)</Label><Textarea value={newTaskCriteria} onChange={e => setNewTaskCriteria(e.target.value)} rows={3} /></div>
+                  <div><Label className="text-xs">Описание</Label><Textarea value={newTaskDesc} onChange={e => setNewTaskDesc(e.target.value)} rows={2} /></div>
+                  <div><Label className="text-xs">Шаги (каждый с новой строки)</Label><Textarea value={newTaskSteps} onChange={e => setNewTaskSteps(e.target.value)} rows={3} /></div>
+                  <div><Label className="text-xs">Критерии проверки</Label><Textarea value={newTaskCriteria} onChange={e => setNewTaskCriteria(e.target.value)} rows={2} /></div>
                 </div>
                 <Button className="gradient-accent text-accent-foreground border-0" onClick={createTask}><Plus className="h-4 w-4 mr-2" /> Создать</Button>
               </div>
@@ -649,68 +801,67 @@ const Admin = () => {
               </div>
 
               <div className="space-y-3">
-                {filteredTasks.map((task, i) => (
-                  <motion.div key={task.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                    <div className="glass rounded-xl p-5">
-                      {editingTask === task.id ? (
-                        <div className="space-y-3">
-                          <Input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} />
-                          <div className="flex gap-3">
-                            <Input type="number" value={editTaskReward} onChange={e => setEditTaskReward(e.target.value)} placeholder="Награда" className="w-32" />
-                            <Select value={editTaskStatus} onValueChange={setEditTaskStatus}>
-                              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                              <SelectContent><SelectItem value="active">Активно</SelectItem><SelectItem value="paused">Пауза</SelectItem><SelectItem value="completed">Завершено</SelectItem></SelectContent>
-                            </Select>
-                            <Button size="sm" onClick={saveEditTask}><Save className="h-4 w-4 mr-1" /> Сохранить</Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingTask(null)}>Отмена</Button>
+                {filteredTasks.map(t => (
+                  <div key={t.id} className="glass rounded-xl p-4">
+                    {editingTask === t.id ? (
+                      <div className="space-y-3">
+                        <Input value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} />
+                        <div className="flex gap-3">
+                          <Input type="number" value={editTaskReward} onChange={e => setEditTaskReward(e.target.value)} className="w-32" />
+                          <Select value={editTaskStatus} onValueChange={setEditTaskStatus}>
+                            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Активно</SelectItem>
+                              <SelectItem value="paused">Пауза</SelectItem>
+                              <SelectItem value="completed">Завершено</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" className="gradient-accent text-accent-foreground border-0" onClick={saveEditTask}>Сохранить</Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingTask(null)}>Отмена</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">{t.title}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {t.task_categories?.name} · {Number(t.reward).toLocaleString("ru-RU")} ₽ · {t.taken_spots}/{t.total_spots} мест
                           </div>
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">{task.title}</span>
-                              <Badge variant="outline">{task.task_categories?.name}</Badge>
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                task.status === "active" ? "bg-accent/10 text-accent" : task.status === "paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"}`}>
-                                {task.status === "active" ? "Активно" : task.status === "paused" ? "Пауза" : "Завершено"}
-                              </span>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Награда: {Number(task.reward).toLocaleString("ru-RU")} ₽ · Выполнено: {task.taken_spots}/{task.total_spots}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {task.status === "active" && <Button variant="ghost" size="sm" className="h-8" onClick={() => updateTaskStatus(task.id, "paused")} title="Приостановить"><Clock className="h-3.5 w-3.5" /></Button>}
-                            {task.status === "paused" && <Button variant="ghost" size="sm" className="h-8" onClick={() => updateTaskStatus(task.id, "active")} title="Активировать"><Zap className="h-3.5 w-3.5" /></Button>}
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingTask(task.id); setEditTaskTitle(task.title); setEditTaskReward(String(task.reward)); setEditTaskStatus(task.status); }}><Edit className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => deleteTask(task.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn("text-xs",
+                            t.status === "active" ? "border-accent/30 text-accent" :
+                            t.status === "paused" ? "border-amber-500/30 text-amber-500" : "border-muted-foreground/30"
+                          )}>{t.status === "active" ? "Активно" : t.status === "paused" ? "Пауза" : "Завершено"}</Badge>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => { setEditingTask(t.id); setEditTaskTitle(t.title); setEditTaskReward(String(t.reward)); setEditTaskStatus(t.status); }}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => deleteTask(t.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  </motion.div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== CATEGORIES ===== */}
           {activeTab === "categories" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Категории заданий</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Категории заданий</h1>
               <p className="text-sm text-muted-foreground mb-6">{categories.length} категорий</p>
-
               <div className="glass rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4">Добавить категорию</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <Input value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Название" />
                   <Input value={newCategoryDesc} onChange={e => setNewCategoryDesc(e.target.value)} placeholder="Описание" />
-                  <Input value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} placeholder="Иконка (например Building2)" />
+                  <Input value={newCategoryIcon} onChange={e => setNewCategoryIcon(e.target.value)} placeholder="Иконка" />
                 </div>
                 <Button className="gradient-accent text-accent-foreground border-0" onClick={createCategory}><Plus className="h-4 w-4 mr-2" /> Добавить</Button>
               </div>
-
               <div className="space-y-3">
                 {categories.map(c => (
                   <div key={c.id} className="glass rounded-xl p-4 flex items-center justify-between">
@@ -722,22 +873,20 @@ const Admin = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== FINANCE ===== */}
           {activeTab === "finance" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Финансы</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Финансы</h1>
               <p className="text-sm text-muted-foreground mb-6">Транзакции и выплаты</p>
-
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard icon={DollarSign} label="Всего выплачено" value={`${stats.totalPaid.toLocaleString("ru-RU")} ₽`} positive />
                 <StatCard icon={Clock} label="Ожидают" value={`${pendingPayments.reduce((s, t) => s + Number(t.amount), 0).toLocaleString("ru-RU")} ₽`} />
                 <StatCard icon={ArrowUpRight} label="Выводы" value={String(transactions.filter(t => t.type === "withdrawal").length)} />
                 <StatCard icon={ArrowDownRight} label="Начисления" value={String(transactions.filter(t => t.type !== "withdrawal").length)} />
               </div>
-
               <div className="glass rounded-2xl overflow-hidden">
                 <div className="p-5 border-b border-border"><h3 className="font-semibold">Транзакции</h3></div>
                 <div className="overflow-x-auto">
@@ -747,6 +896,7 @@ const Admin = () => {
                         <th className="text-left p-4 font-medium text-muted-foreground">Пользователь</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Тип</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Сумма</th>
+                        <th className="text-left p-4 font-medium text-muted-foreground">Метод</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Дата</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Статус</th>
                         <th className="text-left p-4 font-medium text-muted-foreground">Действия</th>
@@ -758,11 +908,18 @@ const Admin = () => {
                           <td className="p-4 font-medium">{t.profiles?.full_name || t.profiles?.email || "—"}</td>
                           <td className="p-4">{t.type === "withdrawal" ? "Вывод" : t.type === "reward" ? "Награда" : "Реф. бонус"}</td>
                           <td className="p-4 font-semibold">{Number(t.amount).toLocaleString("ru-RU")} ₽</td>
+                          <td className="p-4 text-xs">
+                            {t.payment_method ? (
+                              <Badge variant="outline" className="text-xs">
+                                {t.payment_method === "card" ? "Карта" : t.payment_method === "sbp" ? "СБП" : t.payment_method === "crypto" ? "Crypto" : t.payment_method === "lolzteam" ? "LOLZTEAM" : t.payment_method}
+                              </Badge>
+                            ) : "—"}
+                          </td>
                           <td className="p-4 text-muted-foreground">{new Date(t.created_at).toLocaleDateString("ru-RU")}</td>
                           <td className="p-4">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                               t.status === "approved" || t.status === "completed" ? "bg-accent/10 text-accent" :
-                              t.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-destructive/10 text-destructive"}`}>
+                              t.status === "pending" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-destructive/10 text-destructive"}`}>
                               {t.status === "approved" || t.status === "completed" ? "Подтверждено" : t.status === "pending" ? "Ожидает" : "Отклонено"}
                             </span>
                           </td>
@@ -780,13 +937,13 @@ const Admin = () => {
                   </table>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== REPORTS ===== */}
           {activeTab === "reports" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Проверка отчётов</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Проверка отчётов</h1>
               <p className="text-sm text-muted-foreground mb-6">{pendingReports.length} на проверке</p>
               <div className="space-y-3">
                 {reports.map((r, i) => (
@@ -827,13 +984,13 @@ const Admin = () => {
                 ))}
                 {reports.length === 0 && <div className="text-center py-12 text-muted-foreground">Нет отчётов</div>}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== REFERRALS ===== */}
           {activeTab === "referrals" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Реферальная система</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Реферальная система</h1>
               <p className="text-sm text-muted-foreground mb-6">{referrals.length} рефералов</p>
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 <StatCard icon={Users} label="Всего рефералов" value={String(referrals.length)} positive />
@@ -848,7 +1005,7 @@ const Admin = () => {
                     return (
                       <div key={key} className="text-center p-4 rounded-xl border border-border">
                         <Input type="number" value={setting?.value || ""} onChange={e => updateSetting(key, e.target.value)}
-                          className="text-2xl font-bold text-accent text-center border-0 bg-transparent p-0 h-auto" />
+                          className="text-2xl font-bold text-primary text-center border-0 bg-transparent p-0 h-auto" />
                         <div className="text-sm text-muted-foreground mt-1">{i + 1}-й уровень (%)</div>
                       </div>
                     );
@@ -870,15 +1027,14 @@ const Admin = () => {
                   {referrals.length === 0 && <p className="text-sm text-muted-foreground">Нет рефералов</p>}
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== NOTIFICATIONS ===== */}
           {activeTab === "notifications" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Уведомления</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Уведомления</h1>
               <p className="text-sm text-muted-foreground mb-6">Отправка уведомлений пользователям</p>
-
               <div className="glass rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4">Отправить уведомление</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -912,7 +1068,6 @@ const Admin = () => {
                   <Button variant="outline" onClick={sendBroadcast}><Megaphone className="h-4 w-4 mr-2" /> Рассылка всем</Button>
                 </div>
               </div>
-
               <div className="glass rounded-2xl p-6">
                 <h3 className="font-semibold mb-4">Последние уведомления</h3>
                 <div className="space-y-2">
@@ -927,13 +1082,13 @@ const Admin = () => {
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== CONTENT ===== */}
           {activeTab === "content" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Управление контентом</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Управление контентом</h1>
               <p className="text-sm text-muted-foreground mb-6">Страницы, баннеры, новости</p>
               <div className="grid lg:grid-cols-3 gap-6">
                 {[
@@ -943,20 +1098,20 @@ const Admin = () => {
                 ].map((c, i) => (
                   <motion.div key={c.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                     <div className="glass rounded-2xl p-6 hover-lift cursor-pointer" onClick={() => setActiveTab(c.tab)}>
-                      <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4"><c.icon className="h-6 w-6 text-accent" /></div>
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4"><c.icon className="h-6 w-6 text-primary" /></div>
                       <h3 className="font-semibold mb-1">{c.title}</h3>
                       <p className="text-sm text-muted-foreground">{c.desc}</p>
                     </div>
                   </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== BANNERS ===== */}
           {activeTab === "banners" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Баннеры</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Баннеры</h1>
               <p className="text-sm text-muted-foreground mb-6">{banners.length} баннеров</p>
               <div className="glass rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4">Добавить баннер</h3>
@@ -981,13 +1136,13 @@ const Admin = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== NEWS ===== */}
           {activeTab === "news" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Новости</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Новости</h1>
               <p className="text-sm text-muted-foreground mb-6">{news.length} новостей</p>
               <div className="glass rounded-2xl p-6 mb-6">
                 <h3 className="font-semibold mb-4">Добавить новость</h3>
@@ -1013,13 +1168,13 @@ const Admin = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== SETTINGS ===== */}
           {activeTab === "settings" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Системные настройки</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Системные настройки</h1>
               <p className="text-sm text-muted-foreground mb-6">Конфигурация платформы</p>
               <div className="glass rounded-2xl p-6">
                 <div className="space-y-4">
@@ -1038,13 +1193,13 @@ const Admin = () => {
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== REQUISITES ===== */}
           {activeTab === "requisites" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Реквизиты пользователей</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Реквизиты пользователей</h1>
               <p className="text-sm text-muted-foreground mb-6">Просмотр настроенных реквизитов</p>
               <div className="glass rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
@@ -1077,16 +1232,16 @@ const Admin = () => {
                   </table>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
-
+          {/* ===== SECURITY ===== */}
           {activeTab === "security" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Безопасность</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Безопасность</h1>
               <p className="text-sm text-muted-foreground mb-6">Защита и мониторинг</p>
               <div className="grid lg:grid-cols-2 gap-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-6">
+                <div className="glass rounded-2xl p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2"><Shield className="h-4 w-4" /> Настройки безопасности</h3>
                   <div className="space-y-4">
                     {platformSettings.filter(s => ["two_factor_required", "antifraud_enabled", "ip_logging"].includes(s.key)).map(s => (
@@ -1096,23 +1251,23 @@ const Admin = () => {
                       </div>
                     ))}
                   </div>
-                </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass rounded-2xl p-6">
+                </div>
+                <div className="glass rounded-2xl p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2"><Lock className="h-4 w-4" /> Статистика безопасности</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between"><span className="text-sm">Заблокированных пользователей</span><span className="font-semibold">{users.filter(u => u.is_blocked).length}</span></div>
                     <div className="flex justify-between"><span className="text-sm">Верифицированных</span><span className="font-semibold">{users.filter(u => u.is_verified).length}</span></div>
                     <div className="flex justify-between"><span className="text-sm">Событий безопасности</span><span className="font-semibold">{securityLogs.length}</span></div>
                   </div>
-                </motion.div>
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* ===== LOGS ===== */}
           {activeTab === "logs" && (
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Лог безопасности</h1>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+              <h1 className="text-2xl font-display font-bold mb-1">Лог безопасности</h1>
               <p className="text-sm text-muted-foreground mb-6">Последние {securityLogs.length} событий</p>
               <div className="glass rounded-2xl p-6">
                 <div className="space-y-3">
@@ -1130,7 +1285,7 @@ const Admin = () => {
                   {securityLogs.length === 0 && <p className="text-sm text-muted-foreground">Нет событий</p>}
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
         </div>
