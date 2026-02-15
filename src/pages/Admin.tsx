@@ -103,33 +103,47 @@ const Admin = () => {
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("tasks").select("*, task_categories(name)").order("created_at", { ascending: false }),
       supabase.from("task_categories").select("*").order("name"),
-      supabase.from("payments").select("*, profiles!payments_user_id_fkey(full_name, email)").order("created_at", { ascending: false }),
-      supabase.from("reports").select("*, user_tasks(task_id, tasks(title)), profiles!reports_user_id_fkey(full_name)").order("submitted_at", { ascending: false }),
-      supabase.from("referrals").select("*, referrer:profiles!referrals_referrer_id_fkey(full_name), referred:profiles!referrals_referred_id_fkey(full_name)").order("created_at", { ascending: false }),
+      supabase.from("payments").select("*").order("created_at", { ascending: false }),
+      supabase.from("reports").select("*, user_tasks(task_id, tasks(title))").order("submitted_at", { ascending: false }),
+      supabase.from("referrals").select("*").order("created_at", { ascending: false }),
       supabase.from("platform_settings").select("*").order("key"),
       supabase.from("security_logs").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("banners").select("*").order("sort_order"),
       supabase.from("news").select("*").order("created_at", { ascending: false }),
-      supabase.from("notifications").select("*, profiles!notifications_user_id_fkey(full_name)").order("created_at", { ascending: false }).limit(50),
+      supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
 
-    setUsers(usersR.data || []);
+    const profilesData = usersR.data || [];
+    setUsers(profilesData);
     setTasks(tasksR.data || []);
     setCategories(catsR.data || []);
-    setTransactions(txR.data || []);
-    setReports(reportsR.data || []);
-    setReferrals(refsR.data || []);
+
+    // Enrich with profile names
+    const profileMap = new Map(profilesData.map((p: any) => [p.user_id, p]));
+    const enriched = (arr: any[]) => arr.map(item => ({ ...item, profiles: profileMap.get(item.user_id) || null }));
+
+    setTransactions(enriched(txR.data || []));
+    setReports(enriched(reportsR.data || []));
+    setAllNotifications(enriched(notifsR.data || []));
+
+    // Enrich referrals
+    const refsEnriched = (refsR.data || []).map((r: any) => ({
+      ...r,
+      referrer: profileMap.get(r.referrer_id) || null,
+      referred: profileMap.get(r.referred_id) || null,
+    }));
+    setReferrals(refsEnriched);
+
     setPlatformSettings(settingsR.data || []);
     setSecurityLogs(logsR.data || []);
     setBanners(bannersR.data || []);
     setNews(newsR.data || []);
-    setAllNotifications(notifsR.data || []);
 
     const totalPaid = (txR.data || []).filter((t: any) => t.status === "completed" || t.status === "approved").reduce((s: number, t: any) => s + Number(t.amount), 0);
     const pendingReports = (reportsR.data || []).filter((r: any) => r.status === "pending").length;
     const activeTasks = (tasksR.data || []).filter((t: any) => t.status === "active").length;
 
-    setStats({ users: (usersR.data || []).length, activeTasks, totalPaid, pendingReports });
+    setStats({ users: profilesData.length, activeTasks, totalPaid, pendingReports });
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -256,9 +270,10 @@ const Admin = () => {
   const createPayment = async (userId: string, amount: number, type: string, desc: string) => {
     const { data, error } = await supabase.from("payments").insert({
       user_id: userId, amount, type: type as any, description: desc, status: "completed" as const, completed_at: new Date().toISOString()
-    }).select("*, profiles!payments_user_id_fkey(full_name, email)");
+    }).select();
     if (error) { toast({ title: "Ошибка", description: error.message, variant: "destructive" }); return; }
-    setTransactions(prev => [data![0], ...prev]);
+    const profileMap = new Map(users.map((p: any) => [p.user_id, p]));
+    setTransactions(prev => [{ ...data![0], profiles: profileMap.get(userId) || null }, ...prev]);
     if (type === "reward" || type === "referral_bonus") {
       await updateUserBalance(userId, amount);
     }
