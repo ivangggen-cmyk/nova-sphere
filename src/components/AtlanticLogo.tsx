@@ -72,18 +72,12 @@ const AtlanticLogo = ({ size = "md", showText = true, className, dark }: Atlanti
             strokeLinecap="round"
             fill="none"
           />
-          <motion.path
+          <path
             d="M17 26C19 24 21 25 24 24C27 23 29 24 31 26"
             stroke="url(#waveGrad)"
             strokeWidth="2"
             strokeLinecap="round"
             fill="none"
-            animate={{ d: [
-              "M17 26C19 24 21 25 24 24C27 23 29 24 31 26",
-              "M17 25C19 27 21 24 24 25C27 26 29 23 31 25",
-              "M17 26C19 24 21 25 24 24C27 23 29 24 31 26",
-            ]}}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           />
         </motion.svg>
 
