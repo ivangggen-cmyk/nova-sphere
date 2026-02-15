@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
@@ -73,7 +73,16 @@ const Tasks = () => {
         <div className="space-y-2">
           {filtered.map((task, i) => (
             <motion.div key={task.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <Link to={`/dashboard/tasks/${task.id}`} className="flex items-center justify-between p-4 rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-sm transition-all duration-200 group">
+              <Link to={`/dashboard/tasks/${task.id}`} className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:border-primary/20 hover:shadow-sm transition-all duration-200 group">
+                {task.image_url ? (
+                  <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-muted">
+                    <img src={task.image_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
+                    <Briefcase className="h-5 w-5 text-primary/60" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-sm group-hover:text-primary transition-colors truncate">{task.title}</span>
