@@ -1879,9 +1879,44 @@ const Admin = () => {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
               <h1 className="text-2xl font-display font-bold mb-1">Системные настройки</h1>
               <p className="text-sm text-muted-foreground mb-6">Конфигурация платформы</p>
+
+              {/* Maintenance Mode Card */}
+              {(() => {
+                const maintenanceSetting = platformSettings.find(s => s.key === "maintenance_mode");
+                const isOn = maintenanceSetting?.value === "true";
+                return (
+                  <div className={`glass rounded-2xl p-6 mb-6 border-2 ${isOn ? "border-amber-500/50 bg-amber-500/5" : "border-border"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isOn ? "bg-amber-500/15" : "bg-muted"}`}>
+                          <Lock className={`h-6 w-6 ${isOn ? "text-amber-500" : "text-muted-foreground"}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-display font-semibold text-base">🚧 Сайт на реконструкции</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {isOn
+                              ? "Режим включён — пользователи видят экран обслуживания"
+                              : "Закрывает доступ для всех пользователей, кроме администраторов"}
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={isOn}
+                        onCheckedChange={v => updateSetting("maintenance_mode", String(v))}
+                      />
+                    </div>
+                    {isOn && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mt-4 pt-4 border-t border-amber-500/20">
+                        <p className="text-xs text-amber-600 font-medium">⚠️ Все пользователи сейчас видят экран технических работ с шутками и пасхалками. Только администраторы имеют доступ к платформе.</p>
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="glass rounded-2xl p-6">
                 <div className="space-y-4">
-                  {platformSettings.map(s => (
+                  {platformSettings.filter(s => s.key !== "maintenance_mode").map(s => (
                     <div key={s.id} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
                       <div>
                         <div className="text-sm font-medium">{s.description || s.key}</div>
