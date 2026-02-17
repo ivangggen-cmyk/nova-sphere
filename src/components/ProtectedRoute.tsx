@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api";
 import BlockedUserScreen from "@/components/BlockedUserScreen";
 import MaintenanceScreen from "@/components/MaintenanceScreen";
 
@@ -11,12 +11,8 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
 
   useEffect(() => {
     const checkMaintenance = async () => {
-      const { data } = await supabase
-        .from("platform_settings")
-        .select("value")
-        .eq("key", "maintenance_mode")
-        .maybeSingle();
-      setMaintenanceMode(data?.value === "true");
+      const { data } = await db.getSetting("maintenance_mode");
+      setMaintenanceMode((data as any)?.value === "true");
     };
     checkMaintenance();
   }, []);
@@ -30,13 +26,8 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  
-  // Block access for blocked users
   if (profile?.is_blocked) return <BlockedUserScreen />;
-
-  // Maintenance mode - only admins can access
   if (maintenanceMode && !isAdmin) return <MaintenanceScreen />;
-  
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;

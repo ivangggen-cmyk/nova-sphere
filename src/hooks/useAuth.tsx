@@ -1,14 +1,22 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
+import { authApi, db } from "@/lib/api";
+
+interface User {
+  id: string;
+  email: string;
+  user_metadata?: Record<string, any>;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
+  session: any | null;
   loading: boolean;
   isAdmin: boolean;
   profile: any | null;
   signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error?: any }>;
+  signUp: (email: string, password: string, metadata?: { full_name?: string }) => Promise<{ data?: any; error?: any }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,89 +26,87 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   profile: null,
   signOut: async () => {},
+  signIn: async () => ({}),
+  signUp: async () => ({}),
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-async function fetchUserData(userId: string) {
-  try {
-    const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
-    ]);
-    return { profile: profileRes.data, isAdmin: !!roleRes.data };
-  } catch (e) {
-    console.error("Auth data fetch error:", e);
-    return { profile: null, isAdmin: false };
-  }
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [profile, setProfile] = useState<any | null>(null);
-  const initialized = useRef(false);
 
-  useEffect(() => {
-    // Set up listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (newSession?.user) {
-          // Use setTimeout to avoid Supabase deadlock on token refresh
-          setTimeout(async () => {
-            const data = await fetchUserData(newSession.user.id);
-            setProfile(data.profile);
-            setIsAdmin(data.isAdmin);
-            setLoading(false);
-          }, 0);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-          setLoading(false);
-        }
-      }
-    );
-
-    // Then check existing session
-    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
-      if (initialized.current) return;
-      initialized.current = true;
-      
-      if (!existingSession) {
-        setLoading(false);
-      }
-      // If session exists, onAuthStateChange will handle it
-    });
-
-    // Safety timeout — never stay loading forever
-    const timeout = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) console.warn("Auth loading timeout, forcing ready");
-        return false;
-      });
-    }, 5000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+  const loadUserData = useCallback(async (u: User) => {
+    const [profileRes, roleRes] = await Promise.all([
+      db.getProfile(u.id),
+      db.getUserRole(u.id, "admin"),
+    ]);
+    setProfile(profileRes.data);
+    setIsAdmin(!!roleRes.data);
   }, []);
 
+  // Check for existing session on mount
+  useEffect(() => {
+    const stored = localStorage.getItem("auth_user");
+    if (stored) {
+      try {
+        const u = JSON.parse(stored) as User;
+        setUser(u);
+        setSession({ user: u });
+        loadUserData(u).finally(() => setLoading(false));
+      } catch {
+        setLoading(false);
+      }
+    } else {
+      setLoading(false);
+    }
+  }, [loadUserData]);
+
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await authApi.signInWithPassword(email, password);
+    if (error) return { error };
+    if (data) {
+      const u: User = (data as any).user || { id: (data as any).id, email };
+      localStorage.setItem("auth_user", JSON.stringify(u));
+      setUser(u);
+      setSession({ user: u });
+      await loadUserData(u);
+    }
+    return { error: null };
+  };
+
+  const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
+    const { data, error } = await authApi.signUp(email, password, metadata);
+    if (error) return { error };
+    if (data) {
+      const u: User = (data as any).user || { id: (data as any).id, email };
+      localStorage.setItem("auth_user", JSON.stringify(u));
+      setUser(u);
+      setSession({ user: u });
+      await loadUserData(u);
+      return { data: { user: u } };
+    }
+    return { data: null };
+  };
+
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await authApi.signOut();
     setUser(null);
     setSession(null);
     setProfile(null);
     setIsAdmin(false);
   };
 
+  const refreshProfile = async () => {
+    if (user) await loadUserData(user);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, profile, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, profile, signOut, signIn, signUp, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
