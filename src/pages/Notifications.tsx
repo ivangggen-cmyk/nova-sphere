@@ -4,7 +4,7 @@ import { Bell, CheckCircle2, Info, AlertTriangle, Gift, Clock, Settings } from "
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api";
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
   success: { icon: CheckCircle2, color: "text-success" }, info: { icon: Info, color: "text-primary" },
@@ -17,10 +17,22 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { if (!user) return; supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => { setNotifications(data || []); setLoading(false); }); }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    db.getNotifications(user.id).then(({ data }) => { setNotifications(data as any[] || []); setLoading(false); });
+  }, [user]);
 
-  const markAllRead = async () => { if (!user) return; const ids = notifications.filter(n => !n.is_read).map(n => n.id); if (!ids.length) return; await supabase.from("notifications").update({ is_read: true }).in("id", ids); setNotifications(prev => prev.map(n => ({ ...n, is_read: true }))); };
-  const markOneRead = async (id: string) => { await supabase.from("notifications").update({ is_read: true }).eq("id", id); setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n)); };
+  const markAllRead = async () => {
+    if (!user) return;
+    const ids = notifications.filter(n => !n.is_read).map(n => n.id);
+    if (!ids.length) return;
+    await db.updateNotifications(ids, { is_read: true });
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+  };
+  const markOneRead = async (id: string) => {
+    await db.updateNotification(id, { is_read: true });
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+  };
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (

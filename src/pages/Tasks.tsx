@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/api";
 
 const difficultyColors: Record<string, string> = {
   "Легко": "bg-success/10 text-success",
@@ -24,22 +24,20 @@ const Tasks = () => {
   useEffect(() => {
     const fetchData = async () => {
       const [tasksRes, catsRes] = await Promise.all([
-        supabase.from("tasks").select("*, task_categories(name)").eq("status", "active"),
-        supabase.from("task_categories").select("*"),
+        db.getActiveTasks(),
+        db.getCategories(),
       ]);
-      setTasks(tasksRes.data || []);
-      setCategories(catsRes.data || []);
+      setTasks(tasksRes.data as any[] || []);
+      setCategories(catsRes.data as any[] || []);
       setLoading(false);
     };
     fetchData();
   }, []);
 
   const categoryNames = ["Все", ...categories.map(c => c.name)];
-
   const filtered = tasks.filter(t => {
     const catName = t.task_categories?.name || "";
-    return (active === "Все" || catName === active) &&
-      t.title.toLowerCase().includes(search.toLowerCase());
+    return (active === "Все" || catName === active) && t.title.toLowerCase().includes(search.toLowerCase());
   });
 
   return (

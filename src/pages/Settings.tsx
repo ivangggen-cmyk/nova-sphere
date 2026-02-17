@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { db, authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const SettingsPage = () => {
@@ -20,15 +20,15 @@ const SettingsPage = () => {
 
   const handleSave = async () => {
     if (!user) return; setSaving(true);
-    try { await supabase.from("profiles").update({ full_name: fullName, phone }).eq("user_id", user.id); toast({ title: "Сохранено" }); }
-    catch (e: any) { toast({ title: "Ошибка", description: e.message, variant: "destructive" }); }
+    try { await db.updateProfile(user.id, { full_name: fullName, phone }); toast({ title: "Сохранено" }); }
+    catch (e: any) { toast({ title: "Ошибка", description: e?.message, variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
   const handleChangePassword = async () => {
     const email = user?.email; if (!email) return;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-    if (error) toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    const { error } = await authApi.resetPasswordForEmail(email);
+    if (error) toast({ title: "Ошибка", description: error?.message, variant: "destructive" });
     else toast({ title: "Письмо отправлено" });
   };
 
